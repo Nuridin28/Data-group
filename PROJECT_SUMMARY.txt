@@ -1,0 +1,60 @@
+KBTU Transaction Analytics - Frontend
+
+Полноценное веб-приложение для анализа транзакционных данных по Казахстану с AI-рекомендациями.
+
+СТРУКТУРА ПРОЕКТА:
+==================
+
+src/
+├── components/
+│   ├── charts/              # Компоненты графиков (Recharts)
+│   │   ├── RevenueChart.tsx         # Динамика выручки (line/bar)
+│   │   ├── ChannelComparison.tsx    # Сравнение каналов
+│   │   ├── CohortAnalysis.tsx       # Ретеншн клиентов
+│   │   ├── ROIMetrics.tsx           # Метрики ROI
+│   │   └── ForecastChart.tsx        # Прогнозы выручки
+│   ├── AIChatBot.tsx        # AI чат-бот с историей
+│   ├── Dashboard.tsx        # Главный дашборд
+│   ├── FileUpload.tsx       # Загрузка CSV
+│   ├── SummaryCards.tsx     # Карточки метрик
+│   ├── AnomaliesTable.tsx   # Таблица аномалий
+│   └── RecommendationsList.tsx  # Список рекомендаций
+├── services/
+│   └── api.ts               # API клиент (Axios)
+├── types/
+│   └── index.ts             # TypeScript типы
+├── utils/
+│   └── format.ts            # Форматирование данных
+├── App.tsx                  # Главный компонент
+├── main.tsx                 # Точка входа
+└── theme.ts                 # Material UI тема
+
+ОСНОВНЫЕ ФУНКЦИИ:
+================
+
+✅ Загрузка CSV файлов с drag & drop
+✅ Интерактивный дашборд с визуализациями
+✅ AI чат-бот для вопросов о данных
+✅ Адаптивный дизайн (Material UI)
+✅ Интерактивные графики (Recharts)
+✅ Обработка ошибок и состояний загрузки
+✅ TypeScript типизация
+✅ Интеграция с бэкенд API
+
+ТЕХНОЛОГИИ:
+===========
+
+- React 18 + TypeScript
+- Vite (сборщик)
+- Material UI 5
+- Recharts 2
+- Axios
+- React Dropzone
+
+ЗАПУСК:
+=======
+
+npm install
+npm run dev
+
+Бэкенд должен быть на http://localhost:8000
