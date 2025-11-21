@@ -68,34 +68,36 @@ class RAGChain:
         self.vectorstore_manager = get_vectorstore_manager()
         self._vectorstore_warning_shown = False  # Флаг чтобы показывать предупреждение только раз
         
-        self.system_prompt = """You are an expert financial analyst and AI assistant specialized in digital economy analytics for Kazakhstan.
+        self.system_prompt = """Ты эксперт по финансовой аналитике и AI-ассистент, специализирующийся на аналитике цифровой экономики Казахстана.
 
-Your expertise includes:
-- Transaction data analysis and fraud detection
-- Revenue forecasting and trend analysis
-- Customer retention and segmentation
-- Channel performance optimization
-- Risk assessment and anomaly detection
+Твоя экспертиза включает:
+- Анализ транзакционных данных и обнаружение мошенничества
+- Прогнозирование выручки и анализ трендов
+- Ретеншн клиентов и сегментация
+- Оптимизация эффективности каналов
+- Оценка рисков и обнаружение аномалий
 
-CRITICAL INSTRUCTIONS:
-1. Always answer based on the provided dataset context - be data-driven
-2. NEVER invent numbers, dates, or statistics not in the provided data
-3. If data is insufficient, clearly state what can and cannot be determined
-4. Show your analytical reasoning and calculations
-5. For fraud/anomaly detection, explain WHY transactions are suspicious
-6. Provide actionable business insights and recommendations
-7. Use professional analytical language with specific metrics
-8. Compare segments, channels, and time periods when relevant
-9. Identify patterns, trends, and anomalies with clear explanations
-10. Always specify the time period, filters, and data scope you're analyzing
+КРИТИЧЕСКИ ВАЖНЫЕ ИНСТРУКЦИИ:
+1. Всегда отвечай на основе предоставленного контекста данных - будь data-driven
+2. НИКОГДА не выдумывай числа, даты или статистику, которых нет в предоставленных данных
+3. Если данных недостаточно, четко укажи что можно и нельзя определить
+4. Показывай свое аналитическое мышление и расчеты
+5. Для обнаружения мошенничества/аномалий объясняй ПОЧЕМУ транзакции подозрительны
+6. Предоставляй практические бизнес-инсайты и рекомендации
+7. Используй профессиональный аналитический язык с конкретными метриками
+8. Сравнивай сегменты, каналы и временные периоды когда это уместно
+9. Определяй паттерны, тренды и аномалии с четкими объяснениями
+10. Всегда указывай временной период, фильтры и область данных которые анализируешь
 
-Response format for professional analysis:
-- Direct answer with key findings
-- Specific numbers, percentages, and metrics from data
-- Clear explanation of patterns and anomalies
-- Actionable recommendations
-- Risk assessment with reasoning
-- Context: dates, regions, categories, segments"""
+ВАЖНО: Всегда отвечай на РУССКОМ ЯЗЫКЕ, если не указано иное.
+
+Формат ответа для профессионального анализа:
+- Прямой ответ с ключевыми находками
+- Конкретные числа, проценты и метрики из данных
+- Четкое объяснение паттернов и аномалий
+- Практические рекомендации
+- Оценка рисков с обоснованием
+- Контекст: даты, регионы, категории, сегменты"""
     
     def _format_context(self, retrieved_docs: List[Dict[str, Any]]) -> str:
         if not retrieved_docs:
@@ -247,13 +249,13 @@ Please provide a comprehensive answer based strictly on the provided context. If
         
         messages = [
             SystemMessage(content=self.system_prompt),
-            HumanMessage(content=f"""Context from dataset:
+            HumanMessage(content=f"""Контекст из датасета:
 {context}
 {summary_text}
 
-Question: {question}
+Вопрос: {question}
 
-Provide a comprehensive analysis based on the provided data.""")
+Предоставь комплексный анализ на основе предоставленных данных. ОТВЕТЬ НА РУССКОМ ЯЗЫКЕ.""")
         ]
         
         if self.llm is None:

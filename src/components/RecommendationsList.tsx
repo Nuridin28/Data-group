@@ -1,17 +1,20 @@
 import {
-  List,
-  ListItem,
-  ListItemText,
-  ListItemIcon,
   Chip,
   Box,
   Typography,
-  Paper,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  useTheme,
 } from '@mui/material';
 import {
   LocalOffer as DiscountIcon,
   Campaign as MarketingIcon,
   TrendingUp as OptimizationIcon,
+  AttachMoney as MoneyIcon,
 } from '@mui/icons-material';
 import type { Recommendation } from '../types';
 
@@ -20,6 +23,8 @@ interface RecommendationsListProps {
 }
 
 const RecommendationsList = ({ recommendations }: RecommendationsListProps) => {
+  const theme = useTheme();
+  
   if (!recommendations || recommendations.length === 0) {
     return (
       <Box sx={{ p: 3, textAlign: 'center' }}>
@@ -80,52 +85,131 @@ const RecommendationsList = ({ recommendations }: RecommendationsListProps) => {
     }
   };
 
+  const getEffortLabel = (effort?: string) => {
+    switch (effort) {
+      case 'low':
+        return 'Низкая';
+      case 'medium':
+        return 'Средняя';
+      case 'high':
+        return 'Высокая';
+      default:
+        return 'Не указана';
+    }
+  };
+
+  const getEffortColor = (effort?: string) => {
+    switch (effort) {
+      case 'low':
+        return 'success';
+      case 'medium':
+        return 'warning';
+      case 'high':
+        return 'error';
+      default:
+        return 'default';
+    }
+  };
+
   return (
-    <List>
-      {recommendations.map((rec) => (
-        <Paper key={rec.id} sx={{ mb: 2, p: 2 }} variant="outlined">
-          <ListItem disableGutters>
-            <ListItemIcon sx={{ minWidth: 40 }}>
-              {getIcon(rec.type)}
-            </ListItemIcon>
-            <ListItemText
-              primary={
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                  <Typography variant="subtitle1" fontWeight={600}>
-                    {rec.title}
-                  </Typography>
-                  <Chip
-                    label={getTypeLabel(rec.type)}
-                    size="small"
-                    variant="outlined"
-                  />
-                  <Chip
-                    label={getPriorityLabel(rec.priority)}
-                    size="small"
-                    color={getPriorityColor(rec.priority) as any}
-                  />
+    <TableContainer>
+      <Table sx={{ minWidth: 650 }}>
+        <TableHead>
+          <TableRow sx={{ bgcolor: 'action.hover' }}>
+            <TableCell sx={{ fontWeight: 700 }}>Рекомендация</TableCell>
+            <TableCell sx={{ fontWeight: 700 }} align="center">Тип</TableCell>
+            <TableCell sx={{ fontWeight: 700 }} align="center">Приоритет</TableCell>
+            <TableCell sx={{ fontWeight: 700 }} align="right">
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0.5 }}>
+                <MoneyIcon fontSize="small" />
+                Предположительная выгода
+              </Box>
+            </TableCell>
+            <TableCell sx={{ fontWeight: 700 }} align="center">Сложность внедрения</TableCell>
+            <TableCell sx={{ fontWeight: 700 }}>Описание</TableCell>
+          </TableRow>
+        </TableHead>
+        <TableBody>
+          {recommendations.map((rec, index) => (
+            <TableRow 
+              key={rec.id} 
+              sx={{ 
+                '&:hover': { bgcolor: 'action.hover' },
+                bgcolor: index % 2 === 0 ? 'background.paper' : 'action.hover',
+              }}
+            >
+              <TableCell>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <Box sx={{ color: theme.palette.primary.main }}>
+                    {getIcon(rec.type)}
+                  </Box>
+                  <Box>
+                    <Typography variant="body2" fontWeight={600}>
+                      {rec.title}
+                    </Typography>
+                    {rec.segment && (
+                      <Typography variant="caption" color="text.secondary">
+                        Сегмент: {rec.segment}
+                      </Typography>
+                    )}
+                  </Box>
                 </Box>
-              }
-              secondary={
+              </TableCell>
+              <TableCell align="center">
+                <Chip
+                  label={getTypeLabel(rec.type)}
+                  size="small"
+                  variant="outlined"
+                  sx={{ minWidth: 100 }}
+                />
+              </TableCell>
+              <TableCell align="center">
+                <Chip
+                  label={getPriorityLabel(rec.priority)}
+                  size="small"
+                  color={getPriorityColor(rec.priority) as any}
+                />
+              </TableCell>
+              <TableCell align="right">
+                {rec.estimated_benefit ? (
+                  <Typography 
+                    variant="body2" 
+                    fontWeight={700}
+                    sx={{ 
+                      color: theme.palette.success.main,
+                    }}
+                  >
+                    {rec.estimated_benefit}
+                  </Typography>
+                ) : (
+                  <Typography variant="body2" color="text.secondary">
+                    Требует оценки
+                  </Typography>
+                )}
+              </TableCell>
+              <TableCell align="center">
+                <Chip
+                  label={getEffortLabel(rec.implementation_effort)}
+                  size="small"
+                  color={getEffortColor(rec.implementation_effort) as any}
+                  variant="outlined"
+                />
+              </TableCell>
+              <TableCell>
                 <Box>
                   <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
                     {rec.description}
                   </Typography>
-                  {rec.segment && (
-                    <Typography variant="caption" color="text.secondary">
-                      Сегмент: {rec.segment}
-                    </Typography>
-                  )}
-                  <Typography variant="caption" display="block" color="primary" sx={{ mt: 0.5 }}>
-                    Ожидаемый эффект: {rec.expected_impact}
+                  <Typography variant="caption" color="primary" sx={{ fontStyle: 'italic' }}>
+                    Эффект: {rec.expected_impact}
                   </Typography>
                 </Box>
-              }
-            />
-          </ListItem>
-        </Paper>
-      ))}
-    </List>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </TableContainer>
   );
 };
 

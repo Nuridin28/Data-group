@@ -372,12 +372,14 @@ export const generateReport = (data: ReportData): string => {
       <div class="section">
         <h2 class="section-title">AI Рекомендации</h2>
         <table class="data-table">
-          <thead>
+            <thead>
             <tr>
               <th>Тип</th>
               <th>Рекомендация</th>
               <th>Ожидаемый эффект</th>
               <th>Приоритет</th>
+              <th>Предположительная выгода</th>
+              <th>Сложность внедрения</th>
             </tr>
           </thead>
           <tbody>
@@ -387,6 +389,8 @@ export const generateReport = (data: ReportData): string => {
                 <td><strong>${escapeHtml(String(rec.title || ''))}</strong><br><small>${escapeHtml(String(rec.description || ''))}</small></td>
                 <td>${escapeHtml(String(rec.expected_impact || ''))}</td>
                 <td class="risk-${rec.priority || 'medium'}">${(rec.priority || 'medium').toUpperCase()}</td>
+                <td style="color: #10b981; font-weight: 600;">${escapeHtml(String(rec.estimated_benefit || 'Требует оценки'))}</td>
+                <td>${escapeHtml(String(rec.implementation_effort || 'medium'))}</td>
               </tr>
             `).join('')}
           </tbody>

@@ -16,6 +16,8 @@ import {
   Chat as ChatIcon,
   Close as CloseIcon,
   Download as DownloadIcon,
+  Lightbulb as RecommendationsIcon,
+  ExpandLess as ExpandLessIcon,
 } from '@mui/icons-material';
 import RevenueChart from './charts/RevenueChart';
 import ChannelComparison from './charts/ChannelComparison';
@@ -41,6 +43,7 @@ const Dashboard = ({ data: initialData, fileId, onReset }: DashboardProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [recommendationsOpen, setRecommendationsOpen] = useState(false);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
@@ -70,7 +73,8 @@ const Dashboard = ({ data: initialData, fileId, onReset }: DashboardProps) => {
 
   useEffect(() => {
     // Load additional data on mount
-    if (fileId && (!data.forecasts || !data.anomalies || !data.recommendations)) {
+    if (fileId && (!data.forecasts || !data.anomalies || !data.recommendations || (Array.isArray(data.recommendations) && data.recommendations.length === 0))) {
+      console.log('[Dashboard] Loading recommendations for fileId:', fileId);
       refreshData();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -172,6 +176,24 @@ const Dashboard = ({ data: initialData, fileId, onReset }: DashboardProps) => {
               }}
             >
               <RefreshIcon />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Показать рекомендации">
+            <IconButton
+              onClick={() => setRecommendationsOpen(!recommendationsOpen)}
+              sx={{
+                bgcolor: recommendationsOpen ? 'warning.main' : 'background.paper',
+                color: recommendationsOpen ? 'white' : 'warning.main',
+                border: '1px solid',
+                borderColor: recommendationsOpen ? 'warning.main' : 'divider',
+                '&:hover': {
+                  bgcolor: recommendationsOpen ? 'warning.dark' : 'action.hover',
+                  transform: 'scale(1.05)',
+                },
+                transition: 'all 0.3s',
+              }}
+            >
+              <RecommendationsIcon />
             </IconButton>
           </Tooltip>
           <Tooltip title="AI Ассистент">
@@ -317,7 +339,10 @@ const Dashboard = ({ data: initialData, fileId, onReset }: DashboardProps) => {
                 mb: 2,
               }}
             >
-              Метрики ROI по источникам
+              ROI по источникам привлечения клиентов
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              Эффективность маркетинговых каналов
             </Typography>
             <ROIMetrics data={data.roi_metrics} />
           </Paper>
@@ -375,8 +400,8 @@ const Dashboard = ({ data: initialData, fileId, onReset }: DashboardProps) => {
           </Grid>
         )}
 
-        {/* Recommendations */}
-        {data.recommendations && Array.isArray(data.recommendations) && data.recommendations.length > 0 && (
+        {/* Recommendations - Show on button click */}
+        {recommendationsOpen && (
           <Grid item xs={12} lg={chatOpen && !isMobile ? 8 : 12}>
             <Paper 
               sx={{ 
@@ -386,18 +411,36 @@ const Dashboard = ({ data: initialData, fileId, onReset }: DashboardProps) => {
                 background: 'linear-gradient(135deg, rgba(245, 158, 11, 0.02) 0%, rgba(217, 119, 6, 0.02) 100%)',
               }}
             >
-              <Typography 
-                variant="h6" 
-                gutterBottom 
-                sx={{ 
-                  fontWeight: 700,
-                  color: 'warning.main',
-                  mb: 2,
-                }}
-              >
-                AI Рекомендации
-              </Typography>
-              <RecommendationsList recommendations={data.recommendations} />
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Box>
+                  <Typography 
+                    variant="h6" 
+                    sx={{ 
+                      fontWeight: 700,
+                      color: 'warning.main',
+                      mb: 0.5,
+                    }}
+                  >
+                    AI Рекомендации для оптимизации процессов
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Рекомендации по улучшению и оптимизации с предположительной выгодой
+                  </Typography>
+                </Box>
+                <IconButton
+                  onClick={() => setRecommendationsOpen(false)}
+                  size="small"
+                  sx={{
+                    color: 'text.secondary',
+                    '&:hover': {
+                      bgcolor: 'action.hover',
+                    },
+                  }}
+                >
+                  <ExpandLessIcon />
+                </IconButton>
+              </Box>
+              <RecommendationsList recommendations={data.recommendations || []} />
             </Paper>
           </Grid>
         )}

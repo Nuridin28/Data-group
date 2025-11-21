@@ -38,6 +38,11 @@ export interface ROIData {
   revenue: number;
   roi: number;
   profit: number;
+  transactions?: number;
+  customers?: number;
+  avg_transaction?: number;
+  cpa?: number;
+  conversion_rate?: number;
 }
 
 export interface ForecastData {
@@ -72,6 +77,8 @@ export interface Recommendation {
   segment?: string;
   expected_impact: string;
   priority: 'high' | 'medium' | 'low';
+  estimated_benefit?: string;
+  implementation_effort?: 'low' | 'medium' | 'high';
 }
 
 export interface ChatMessage {

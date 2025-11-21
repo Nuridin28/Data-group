@@ -138,3 +138,23 @@ class TransactionListItem(BaseModel):
     is_refunded: bool = Field(..., description="Whether transaction was refunded")
     is_canceled: bool = Field(..., description="Whether transaction was canceled")
 
+class RecommendationItem(BaseModel):
+    id: str = Field(..., description="Recommendation ID")
+    type: str = Field(..., description="Type: discount, marketing, optimization")
+    title: str = Field(..., description="Recommendation title")
+    description: str = Field(..., description="Detailed description")
+    expected_impact: str = Field(..., description="Expected impact description")
+    priority: str = Field(..., description="Priority: high, medium, low")
+    segment: Optional[str] = Field(None, description="Target segment")
+    estimated_benefit: Optional[str] = Field(None, description="Estimated financial benefit in KZT or percentage")
+    implementation_effort: Optional[str] = Field(None, description="Implementation effort: low, medium, high")
+
+class RecommendationsResponse(BaseModel):
+    recommendations: List[RecommendationItem] = Field(..., description="List of AI-generated recommendations")
+    ai_analysis: str = Field(..., description="AI analysis and reasoning in Russian")
+
+class ROIMetricsResponse(BaseModel):
+    roi_metrics: List[Dict[str, Any]] = Field(..., description="ROI metrics by source")
+    ai_analysis: str = Field(..., description="AI analysis of ROI in Russian")
+    best_investment_opportunity: Optional[str] = Field(None, description="Best investment opportunity identified by AI")
+

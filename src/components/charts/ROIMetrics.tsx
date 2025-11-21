@@ -30,10 +30,12 @@ const ROIMetrics = ({ data }: ROIMetricsProps) => {
 
   const chartData = data.map((item) => ({
     source: item.source,
-    roi: item.roi,
-    revenue: item.revenue,
-    investment: item.investment,
-    profit: item.profit,
+    roi: item.roi || 0,
+    revenue: item.revenue || 0,
+    investment: item.investment || 0,
+    profit: item.profit || 0,
+    customers: item.customers || 0,
+    cpa: item.cpa || 0,
   }));
 
   return (
@@ -48,12 +50,16 @@ const ROIMetrics = ({ data }: ROIMetricsProps) => {
             if (name === 'roi') {
               return formatPercentage(value);
             }
+            if (name === 'cpa') {
+              return `${formatCurrency(value)} на клиента`;
+            }
             return formatCurrency(value);
           }}
           contentStyle={{
             backgroundColor: theme.palette.background.paper,
             border: `1px solid ${theme.palette.divider}`,
           }}
+          labelFormatter={(label) => `Источник: ${label}`}
         />
         <Legend />
         <Bar 

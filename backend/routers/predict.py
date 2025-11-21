@@ -7,7 +7,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from models.schemas import (
     PredictionRequest, TransactionPredictionResponse,
     CancellationPredictionRequest, CancellationPredictionResponse,
-    SuspiciousTransactionResponse, AnalyticsRequest
+    SuspiciousTransactionResponse, AnalyticsRequest,
+    RecommendationsResponse, RecommendationItem, ROIMetricsResponse
 )
 from services.prediction_service import get_prediction_service
 from services.data_service import get_data_service
@@ -32,12 +33,12 @@ async def predict_transactions(request: PredictionRequest = PredictionRequest(da
             filters=filters if filters else None
         )
         
-        question = f"""Analyze transaction volume predictions:
-- Days ahead: {request.days_ahead}
-- Predicted total revenue: {predictions['predicted_total_revenue']:,.2f} KZT
-- Predicted volumes: {predictions['predicted_volume'][:10] if len(predictions['predicted_volume']) > 10 else predictions['predicted_volume']}
+        question = f"""Проанализируй прогнозы объема транзакций на русском языке:
+- Период прогноза: {request.days_ahead} дней
+- Прогнозируемая общая выручка: {predictions['predicted_total_revenue']:,.2f} KZT
+- Прогнозируемые объемы: {predictions['predicted_volume'][:10] if len(predictions['predicted_volume']) > 10 else predictions['predicted_volume']}
 
-Provide analysis of the forecast, identify trends, and suggest actions based on the predictions."""
+Предоставь анализ прогноза, определи тренды и предложи действия на основе прогнозов. ОТВЕТЬ НА РУССКОМ ЯЗЫКЕ."""
         
         ai_result = rag_chain.query_with_analytics(question, predictions)
         
@@ -65,13 +66,13 @@ async def predict_cancellation(request: CancellationPredictionRequest) -> Cancel
             merchant_category=request.merchant_category
         )
         
-        question = f"""Analyze cancellation prediction:
-- Cancellation probability: {prediction['cancellation_probability']:.2%}
-- Risk level: {prediction['risk_level']}
-- Key factors: {prediction['factors']}
-- Transaction details: Amount={request.amount_kzt} KZT, Channel={request.channel}, Payment={request.payment_method}, Segment={request.customer_segment}
+        question = f"""Проанализируй прогноз отмены транзакции на русском языке:
+- Вероятность отмены: {prediction['cancellation_probability']:.2%}
+- Уровень риска: {prediction['risk_level']}
+- Ключевые факторы: {prediction['factors']}
+- Детали транзакции: Сумма={request.amount_kzt} KZT, Канал={request.channel}, Оплата={request.payment_method}, Сегмент={request.customer_segment}
 
-Provide recommendations to reduce cancellation risk."""
+Предоставь рекомендации по снижению риска отмены. ОТВЕТЬ НА РУССКОМ ЯЗЫКЕ."""
         
         ai_result = rag_chain.query_with_analytics(question, prediction)
         
@@ -114,26 +115,28 @@ async def detect_suspicious_transactions(request: AnalyticsRequest = AnalyticsRe
             for t in sample_txns
         ])
         
-        question = f"""As a professional fraud analyst, analyze these suspicious transactions:
+        question = f"""Ты профессиональный аналитик по мошенничеству и аномалиям в транзакционных данных для цифровой экономики Казахстана.
 
-SUMMARY:
-- Total suspicious transactions detected: {suspicious_data['total_suspicious']}
-- Risk factors identified: {len(suspicious_data.get('risk_factors', []))}
-- Model methodology: {suspicious_data.get('model_insights', 'ML-based anomaly detection')}
+ПРОАНАЛИЗИРУЙ следующие подозрительные транзакции:
 
-SAMPLE SUSPICIOUS TRANSACTIONS:
-{txn_details if txn_details else 'None detected'}
+СВОДКА:
+- Всего обнаружено подозрительных транзакций: {suspicious_data['total_suspicious']}
+- Выявлено факторов риска: {len(suspicious_data.get('risk_factors', []))}
+- Методология модели: {suspicious_data.get('model_insights', 'ML-based anomaly detection')}
 
-RISK FACTORS:
-{chr(10).join([f"- {rf.get('factor', 'unknown')}: {rf.get('description', '')} ({rf.get('count', 0)} cases)" for rf in suspicious_data.get('risk_factors', [])])}
+ПРИМЕРЫ ПОДОЗРИТЕЛЬНЫХ ТРАНЗАКЦИЙ:
+{txn_details if txn_details else 'Не обнаружено'}
 
-Provide professional analysis:
-1. Identify the most critical fraud patterns and their business impact
-2. Explain WHY each pattern is suspicious with specific metrics
-3. Recommend immediate actions and fraud prevention strategies
-4. Estimate potential financial risk
-5. Suggest monitoring and alerting rules
-Use professional analytical language with specific numbers and actionable insights."""
+ФАКТОРЫ РИСКА:
+{chr(10).join([f"- {rf.get('factor', 'unknown')}: {rf.get('description', '')} ({rf.get('count', 0)} случаев)" for rf in suspicious_data.get('risk_factors', [])])}
+
+ОБЯЗАТЕЛЬНО ОТВЕТЬ НА РУССКОМ ЯЗЫКЕ и предоставь профессиональный анализ:
+1. Определи наиболее критические паттерны мошенничества и их влияние на бизнес
+2. Объясни ПОЧЕМУ каждый паттерн подозрителен с конкретными метриками
+3. Рекомендуй немедленные действия и стратегии предотвращения мошенничества
+4. Оцени потенциальный финансовый риск
+5. Предложи правила мониторинга и алертинга
+Используй профессиональный аналитический язык с конкретными числами и практическими рекомендациями."""
         
         ai_result = rag_chain.query_with_analytics(question, suspicious_data)
         
