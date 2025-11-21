@@ -296,7 +296,7 @@ const Dashboard = ({ data: initialData, fileId, onReset }: DashboardProps) => {
         )}
 
         {/* Channel Comparison */}
-        <Grid item xs={12} md={6} lg={chatOpen && !isMobile ? 4 : 6}>
+        <Grid item xs={12} md={12} lg={chatOpen && !isMobile ? 4 : 12}>
           <Paper 
             sx={{ 
               p: 3, 
@@ -321,7 +321,7 @@ const Dashboard = ({ data: initialData, fileId, onReset }: DashboardProps) => {
         </Grid>
 
         {/* ROI Metrics */}
-        <Grid item xs={12} md={6} lg={chatOpen && !isMobile ? 4 : 6}>
+        {/* <Grid item xs={12} md={6} lg={chatOpen && !isMobile ? 4 : 6}>
           <Paper 
             sx={{ 
               p: 3, 
@@ -346,7 +346,7 @@ const Dashboard = ({ data: initialData, fileId, onReset }: DashboardProps) => {
             </Typography>
             <ROIMetrics data={data.roi_metrics} />
           </Paper>
-        </Grid>
+        </Grid> */}
 
         {/* Cohort Analysis */}
         <Grid item xs={12} lg={chatOpen && !isMobile ? 8 : 12}>
