@@ -30,7 +30,7 @@
 ### Требования
 - Node.js 18+ 
 - npm или yarn
-- Бэкенд API должен быть запущен на `http://localhost:8000`
+- Бэкенд API развернут на `https://data-group.onrender.com` (или локально на `http://localhost:8000` для разработки)
 
 ### Установка зависимостей
 ```bash
@@ -56,13 +56,15 @@ npm run preview
 
 ## Конфигурация API
 
-Создайте файл `.env` в корне проекта:
+Бэкенд развернут на: `https://data-group.onrender.com`
+
+Для локальной разработки создайте файл `.env` в корне проекта:
 
 ```env
 VITE_API_URL=http://localhost:8000
 ```
 
-Если переменная не указана, по умолчанию используется `http://localhost:8000`
+Если переменная не указана, по умолчанию используется `https://data-group.onrender.com`
 
 ## API Endpoints
 

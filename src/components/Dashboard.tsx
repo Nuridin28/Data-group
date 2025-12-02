@@ -22,7 +22,6 @@ import {
 import RevenueChart from './charts/RevenueChart';
 import ChannelComparison from './charts/ChannelComparison';
 import CohortAnalysis from './charts/CohortAnalysis';
-import ROIMetrics from './charts/ROIMetrics';
 import SummaryCards from './SummaryCards';
 import AIChatBot from './AIChatBot';
 import ForecastChart from './charts/ForecastChart';
@@ -105,7 +104,6 @@ const Dashboard = ({ data: initialData, fileId, onReset }: DashboardProps) => {
 
   return (
     <Box sx={{ position: 'relative' }}>
-      {}
       <Box 
         sx={{ 
           display: 'flex', 
@@ -236,12 +234,10 @@ const Dashboard = ({ data: initialData, fileId, onReset }: DashboardProps) => {
       </Box>
 
       <Grid container spacing={3}>
-        {}
         <Grid item xs={12}>
           <SummaryCards summary={data.summary} />
         </Grid>
 
-        {}
         <Grid item xs={12} lg={chatOpen && !isMobile ? 8 : 12}>
           <Paper 
             sx={{ 
@@ -267,7 +263,6 @@ const Dashboard = ({ data: initialData, fileId, onReset }: DashboardProps) => {
           </Paper>
         </Grid>
 
-        {}
         {data.forecasts && data.forecasts.revenue_forecast && data.forecasts.revenue_forecast.length > 0 && (
           <Grid item xs={12} lg={chatOpen && !isMobile ? 8 : 12}>
             <Paper 
@@ -295,7 +290,6 @@ const Dashboard = ({ data: initialData, fileId, onReset }: DashboardProps) => {
           </Grid>
         )}
 
-        {}
         <Grid item xs={12} md={12} lg={chatOpen && !isMobile ? 4 : 12}>
           <Paper 
             sx={{ 
@@ -320,10 +314,6 @@ const Dashboard = ({ data: initialData, fileId, onReset }: DashboardProps) => {
           </Paper>
         </Grid>
 
-        {}
-/}
-
-        {}
         <Grid item xs={12} lg={chatOpen && !isMobile ? 8 : 12}>
           <Paper 
             sx={{ 
@@ -348,7 +338,6 @@ const Dashboard = ({ data: initialData, fileId, onReset }: DashboardProps) => {
           </Paper>
         </Grid>
 
-        {}
         {data.anomalies && Array.isArray(data.anomalies) && data.anomalies.length > 0 && (
           <Grid item xs={12} lg={chatOpen && !isMobile ? 8 : 12}>
             <Paper 
@@ -375,7 +364,6 @@ const Dashboard = ({ data: initialData, fileId, onReset }: DashboardProps) => {
           </Grid>
         )}
 
-        {}
         {recommendationsOpen && (
           <Grid item xs={12} lg={chatOpen && !isMobile ? 8 : 12}>
             <Paper 
@@ -421,7 +409,6 @@ const Dashboard = ({ data: initialData, fileId, onReset }: DashboardProps) => {
         )}
       </Grid>
 
-      {}
       <Drawer
         anchor="right"
         open={chatOpen}
