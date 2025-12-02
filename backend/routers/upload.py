@@ -13,15 +13,12 @@ from services.data_service import reload_data_service
 
 router = APIRouter(prefix="/api", tags=["File Upload"])
 
-# Хранилище загруженных файлов
 UPLOAD_DIR = Path("data/uploads")
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
-# Файл для хранения метаданных загруженных файлов
 METADATA_FILE = UPLOAD_DIR / "uploads_metadata.json"
 
 def load_metadata() -> Dict[str, Dict[str, Any]]:
-    """Загрузить метаданные загруженных файлов"""
     if METADATA_FILE.exists():
         try:
             with open(METADATA_FILE, 'r', encoding='utf-8') as f:
@@ -31,18 +28,11 @@ def load_metadata() -> Dict[str, Dict[str, Any]]:
     return {}
 
 def save_metadata(metadata: Dict[str, Dict[str, Any]]):
-    """Сохранить метаданные"""
     with open(METADATA_FILE, 'w', encoding='utf-8') as f:
         json.dump(metadata, f, ensure_ascii=False, indent=2)
 
 @router.post("/upload")
 async def upload_csv_file(file: UploadFile = File(...)) -> Dict[str, Any]:
-    """
-    Загрузка CSV файла с транзакционными данными
-    
-    Принимает CSV файл, сохраняет его и возвращает file_id для последующих запросов
-    """
-    # Проверяем что это CSV файл
     if not file.filename or not file.filename.endswith('.csv'):
         raise HTTPException(
             status_code=400, 
@@ -50,24 +40,18 @@ async def upload_csv_file(file: UploadFile = File(...)) -> Dict[str, Any]:
         )
     
     try:
-        # Генерируем уникальный ID для файла
         file_id = str(uuid.uuid4())
         
-        # Сохраняем файл
         file_path = UPLOAD_DIR / f"{file_id}.csv"
         
-        # Читаем содержимое файла
         contents = await file.read()
         
-        # Сохраняем на диск
         with open(file_path, 'wb') as f:
             f.write(contents)
         
-        # Проверяем что файл валидный CSV
         try:
             df = pd.read_csv(file_path)
             
-            # Проверяем минимальные требования к данным
             if len(df) == 0:
                 os.remove(file_path)
                 raise HTTPException(
@@ -75,7 +59,6 @@ async def upload_csv_file(file: UploadFile = File(...)) -> Dict[str, Any]:
                     detail="Файл пустой. Пожалуйста, загрузите файл с данными."
                 )
             
-            # Сохраняем информацию о файле
             metadata = load_metadata()
             metadata[file_id] = {
                 "file_path": str(file_path),
@@ -86,13 +69,11 @@ async def upload_csv_file(file: UploadFile = File(...)) -> Dict[str, Any]:
             }
             save_metadata(metadata)
             
-            # Перезагружаем data service с загруженным файлом
             try:
                 reload_data_service(str(file_path))
                 print(f"Data service reloaded with uploaded file: {file_path}")
             except Exception as reload_error:
                 print(f"Warning: Could not reload data service: {reload_error}")
-                # Продолжаем работу даже если не удалось перезагрузить
             
             return {
                 "message": "Файл успешно загружен и обработан",
@@ -136,7 +117,6 @@ async def upload_csv_file(file: UploadFile = File(...)) -> Dict[str, Any]:
 
 @router.get("/upload/{file_id}/info")
 async def get_file_info(file_id: str) -> Dict[str, Any]:
-    """Получить информацию о загруженном файле"""
     metadata = load_metadata()
     
     if file_id not in metadata:

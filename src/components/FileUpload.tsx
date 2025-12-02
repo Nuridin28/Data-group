@@ -43,7 +43,7 @@ const FileUpload = ({ onUploaded, onUploadStart, isLoading }: FileUploadProps) =
     setUploadProgress(0);
 
     try {
-      // Simulate progress
+      
       const progressInterval = setInterval(() => {
         setUploadProgress((prev) => {
           if (prev >= 90) {
@@ -59,10 +59,10 @@ const FileUpload = ({ onUploaded, onUploadStart, isLoading }: FileUploadProps) =
       setUploadProgress(95);
       clearInterval(progressInterval);
 
-      // Небольшая задержка для обработки на бэкенде
+      
       await new Promise(resolve => setTimeout(resolve, 1000));
 
-      // Fetch analytics
+      
       console.log('Fetching analytics for file_id:', uploadResponse.file_id);
       setUploadProgress(98);
       const analyticsData = await getAnalytics(uploadResponse.file_id);

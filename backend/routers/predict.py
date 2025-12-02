@@ -106,7 +106,6 @@ async def detect_suspicious_transactions(request: AnalyticsRequest = AnalyticsRe
             limit=100
         )
         
-        # Build detailed context for AI analysis
         sample_txns = suspicious_data['suspicious_transactions'][:10] if suspicious_data['suspicious_transactions'] else []
         txn_details = "\n".join([
             f"- Txn {t.get('transaction_id', 'N/A')}: {t.get('amount_kzt', 0):,.0f} KZT, "

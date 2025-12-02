@@ -134,7 +134,6 @@ async def get_retention_analytics(request: AnalyticsRequest = AnalyticsRequest()
 
 @router.post("/transactions", response_model=List[TransactionListItem])
 async def get_transactions(request: AnalyticsRequest = AnalyticsRequest(), limit: int = Query(100, ge=1, le=1000)) -> List[TransactionListItem]:
-    """Get list of transactions with optional filters"""
     try:
         data_service = get_data_service()
         
@@ -154,10 +153,8 @@ async def get_transactions(request: AnalyticsRequest = AnalyticsRequest(), limit
         
         df = data_service.get_dataframe(filters)
         
-        # Limit results and convert to dict
         transactions = df.head(limit).to_dict('records')
         
-        # Format the response
         formatted_transactions = []
         for txn in transactions:
             formatted_txn = TransactionListItem(
@@ -180,10 +177,6 @@ async def get_transactions(request: AnalyticsRequest = AnalyticsRequest(), limit
 
 @router.post("/recommendations", response_model=RecommendationsResponse)
 async def get_ai_recommendations(request: AnalyticsRequest = AnalyticsRequest()) -> RecommendationsResponse:
-    """
-    Get AI-generated recommendations based on comprehensive data analysis.
-    Returns structured recommendations with LLM analysis in Russian.
-    """
     try:
         data_service = get_data_service()
         rag_chain = get_rag_chain()
@@ -198,7 +191,6 @@ async def get_ai_recommendations(request: AnalyticsRequest = AnalyticsRequest())
         if request.city:
             filters['city'] = request.city
         
-        # Get comprehensive analytics
         revenue_data = data_service.get_revenue_analytics(filters)
         channel_data = data_service.get_channel_analytics(filters)
         retention_data = data_service.get_retention_analytics(filters)
@@ -206,7 +198,6 @@ async def get_ai_recommendations(request: AnalyticsRequest = AnalyticsRequest())
         df = data_service.get_dataframe(filters)
         valid_transactions = df[(df['is_refunded'] == 0) & (df['is_canceled'] == 0)]
         
-        # Calculate best_channel_revenue for estimated_benefit calculations
         best_channel_revenue = 0
         if channel_data.get('channel_performance'):
             for ch in channel_data.get('channel_performance', []):
@@ -214,7 +205,6 @@ async def get_ai_recommendations(request: AnalyticsRequest = AnalyticsRequest())
                 if ch_revenue > best_channel_revenue:
                     best_channel_revenue = ch_revenue
         
-        # Build comprehensive context for LLM
         context = f"""ДАННЫЕ ДЛЯ АНАЛИЗА:
 
 ВЫРУЧКА:
@@ -274,7 +264,6 @@ async def get_ai_recommendations(request: AnalyticsRequest = AnalyticsRequest())
 ФОРМАТ ОТВЕТА - ТОЛЬКО JSON:
 {{"recommendations": [...], "analysis": "..."}}"""
 
-        # Call LLM for recommendations
         try:
             ai_result = rag_chain.query_with_analytics(question, {
                 "revenue_data": revenue_data,
@@ -288,18 +277,14 @@ async def get_ai_recommendations(request: AnalyticsRequest = AnalyticsRequest())
             answer = ""
             ai_result = {"answer": ""}
         
-        # Parse JSON from LLM response
         import json
         import re
         
         recommendations = []
         ai_analysis = answer
         
-        # Use pre-calculated values from above (already calculated before LLM call)
         total_revenue = float(revenue_data.get('total_revenue', 0) or 0)
-        # best_channel_revenue already calculated above at line 209-215
         
-        # Try to extract JSON from response
         json_match = re.search(r'\{[\s\S]*\}', answer) if answer else None
         if json_match:
             try:
@@ -309,10 +294,8 @@ async def get_ai_recommendations(request: AnalyticsRequest = AnalyticsRequest())
                 if 'recommendations' in parsed and isinstance(parsed['recommendations'], list):
                     print(f"[Recommendations] Parsed {len(parsed['recommendations'])} recommendations from LLM")
                     for rec in parsed['recommendations']:
-                        # Ensure estimated_benefit is calculated if not provided or is 0
                         estimated_benefit = rec.get('estimated_benefit', '').strip()
                         if not estimated_benefit or estimated_benefit == '0' or '0 KZT' in str(estimated_benefit) or estimated_benefit == '':
-                            # Calculate based on recommendation type and available data
                             if 'маркетинг' in rec.get('type', '').lower() or 'marketing' in rec.get('type', '').lower():
                                 if best_channel_revenue > 0:
                                     benefit_value = best_channel_revenue * 0.2
@@ -328,7 +311,6 @@ async def get_ai_recommendations(request: AnalyticsRequest = AnalyticsRequest())
                             else:
                                 estimated_benefit = "Требует оценки на основе данных"
                         
-                        # Final check - ensure estimated_benefit is not empty or 0
                         if not estimated_benefit or estimated_benefit.strip() == '' or '0 KZT' in estimated_benefit:
                             if total_revenue > 0:
                                 estimated_benefit = f"+{total_revenue * 0.05:,.0f} KZT выручки"
@@ -356,11 +338,8 @@ async def get_ai_recommendations(request: AnalyticsRequest = AnalyticsRequest())
                 print(f"[Recommendations] Error parsing JSON: {str(e)}")
                 pass
         
-        # If no recommendations parsed from JSON, try to extract from AI text analysis
-        # Use pre-calculated best_channel_revenue and total_revenue from above
         if not recommendations and ai_analysis and len(ai_analysis) > 50:
             print(f"[Recommendations] Trying to extract recommendations from AI text analysis, length: {len(ai_analysis)}")
-            # Try to extract recommendations from text
             lines = ai_analysis.split('\n')
             rec_count = 0
             for line in lines:
@@ -378,7 +357,6 @@ async def get_ai_recommendations(request: AnalyticsRequest = AnalyticsRequest())
                         elif any(kw in line.lower() for kw in ['долгосроч', 'постепен']):
                             priority = 'low'
                         
-                        # Calculate estimated_benefit based on type
                         if rec_type == 'marketing' and best_channel_revenue > 0:
                             estimated_benefit = f"+{best_channel_revenue * 0.2:,.0f} KZT выручки"
                         elif total_revenue > 0:
@@ -394,30 +372,23 @@ async def get_ai_recommendations(request: AnalyticsRequest = AnalyticsRequest())
                             expected_impact="Улучшение показателей на основе анализа данных",
                             priority=priority,
                             estimated_benefit=estimated_benefit,
-                            implementation_effort=priority  # Use priority as effort estimate
+                            implementation_effort=priority
                         ))
                         rec_count += 1
         
-        # Fallback recommendations if LLM failed or returned empty
-        # Always ensure we have at least some recommendations
         if not recommendations or len(recommendations) == 0:
             print(f"[Recommendations] LLM returned no recommendations, creating fallback. Answer length: {len(answer) if answer else 0}")
-            # Recalculate best_channel_revenue to ensure it's available
             best_channel_revenue_fallback = 0
             if channel_data.get('best_channel') and channel_data.get('channel_performance'):
                 for ch in channel_data.get('channel_performance', []):
                     if ch.get('channel') == channel_data['best_channel']:
-                        # Try both 'revenue' and 'total_revenue' field names
                         best_channel_revenue_fallback = float(ch.get('total_revenue', ch.get('revenue', 0)) or 0)
                         break
             
-            # Use the pre-calculated best_channel_revenue if available, otherwise use fallback
             final_best_channel_revenue = best_channel_revenue if best_channel_revenue > 0 else best_channel_revenue_fallback
             final_total_revenue = float(revenue_data.get('total_revenue', 0) or 0)
             
-            # Always create at least 2-3 fallback recommendations
             if final_best_channel_revenue > 0 and channel_data.get('best_channel'):
-                # Calculate estimated benefit as 20% increase from current revenue
                 estimated_benefit_value = final_best_channel_revenue * 0.2
                 estimated_benefit = f"+{estimated_benefit_value:,.0f} KZT выручки" if estimated_benefit_value > 0 else "+10,000 KZT выручки"
                 recommendations.append(RecommendationItem(
@@ -432,7 +403,6 @@ async def get_ai_recommendations(request: AnalyticsRequest = AnalyticsRequest())
                 ))
             
             if final_total_revenue > 0:
-                # Calculate estimated benefit as 15% of total revenue from optimization
                 estimated_benefit_value = final_total_revenue * 0.15
                 estimated_benefit = f"+{estimated_benefit_value:,.0f} KZT выручки"
                 recommendations.append(RecommendationItem(
@@ -446,7 +416,6 @@ async def get_ai_recommendations(request: AnalyticsRequest = AnalyticsRequest())
                     implementation_effort="low"
                 ))
             
-            # Add a general recommendation if we have any data
             if final_total_revenue > 0 or len(channel_data.get('channel_performance', [])) > 0:
                 estimated_benefit_val = final_total_revenue * 0.1 if final_total_revenue > 0 else 50000
                 estimated_benefit = f"+{estimated_benefit_val:,.0f} KZT выручки"
@@ -461,12 +430,10 @@ async def get_ai_recommendations(request: AnalyticsRequest = AnalyticsRequest())
                     implementation_effort="medium"
                 ))
         
-        # Ensure we always return at least some recommendations
         final_recommendations = recommendations[:10] if len(recommendations) > 0 else []
         
         print(f"[Recommendations] Total recommendations before final check: {len(final_recommendations)}")
         
-        # If still no recommendations, create a basic one
         if len(final_recommendations) == 0:
             print("[Recommendations] Creating fallback recommendation")
             total_rev = float(revenue_data.get('total_revenue', 0) or 0)
@@ -491,7 +458,6 @@ async def get_ai_recommendations(request: AnalyticsRequest = AnalyticsRequest())
         
     except Exception as e:
         print(f"[Recommendations] Exception in get_recommendations: {str(e)}")
-        # Even on error, try to return fallback recommendations
         try:
             data_service = get_data_service()
             revenue_data = data_service.get_revenue_analytics({})
@@ -533,7 +499,6 @@ async def get_ai_recommendations(request: AnalyticsRequest = AnalyticsRequest())
             )
         except Exception as fallback_error:
             print(f"[Recommendations] Fallback also failed: {str(fallback_error)}")
-            # Last resort - return at least one recommendation
             return RecommendationsResponse(
                 recommendations=[
                     RecommendationItem(
@@ -552,9 +517,6 @@ async def get_ai_recommendations(request: AnalyticsRequest = AnalyticsRequest())
 
 @router.post("/roi", response_model=ROIMetricsResponse)
 async def get_roi_metrics(request: AnalyticsRequest = AnalyticsRequest()) -> ROIMetricsResponse:
-    """
-    Get ROI metrics based on acquisition sources (marketing channels) with AI analysis in Russian.
-    """
     try:
         data_service = get_data_service()
         rag_chain = get_rag_chain()
@@ -568,21 +530,17 @@ async def get_roi_metrics(request: AnalyticsRequest = AnalyticsRequest()) -> ROI
         df = data_service.get_dataframe(filters)
         valid_transactions = df[(df['is_refunded'] == 0) & (df['is_canceled'] == 0)]
         
-        # Calculate ROI based on acquisition_source (marketing sources)
         roi_metrics = []
         
         if 'acquisition_source' in valid_transactions.columns:
-            # Group by acquisition source
             source_stats = valid_transactions.groupby('acquisition_source').agg({
                 'amount_kzt': ['sum', 'count', 'mean'],
                 'transaction_id': 'nunique' if 'transaction_id' in valid_transactions.columns else 'count'
             }).reset_index()
             
-            # Flatten column names - handle MultiIndex columns
             if isinstance(source_stats.columns, pd.MultiIndex):
                 source_stats.columns = ['source', 'revenue', 'transactions', 'avg_transaction', 'customers']
             else:
-                # Ensure we have the right column names
                 if len(source_stats.columns) >= 5:
                     source_stats.columns = ['source', 'revenue', 'transactions', 'avg_transaction', 'customers']
             
@@ -594,19 +552,16 @@ async def get_roi_metrics(request: AnalyticsRequest = AnalyticsRequest()) -> ROI
                     customers = int(row['customers']) if pd.notna(row.get('customers')) and row.get('customers') != '' else 0
                     avg_transaction = float(row['avg_transaction']) if pd.notna(row.get('avg_transaction')) and row.get('avg_transaction') != '' else 0.0
                     
-                    # Skip if no revenue or invalid data
                     if revenue <= 0 or pd.isna(revenue) or not pd.isfinite(revenue):
                         continue
                 except (ValueError, KeyError, TypeError) as e:
                     print(f"Warning: Error processing row in ROI calculation: {e}")
                     continue
                 
-                # Estimate marketing investment based on acquisition source
-                # Different sources have different typical costs
                 investment_multipliers = {
-                    'organic': 0.05,  # Organic traffic - low cost
-                    'google_ads': 0.25,  # Paid search - higher cost
-                    'instagram': 0.15,  # Social media ads
+                    'organic': 0.05,
+                    'google_ads': 0.25,
+                    'instagram': 0.15,
                     'facebook': 0.15,
                     'tiktok': 0.12,
                     'youtube': 0.18,
@@ -615,15 +570,11 @@ async def get_roi_metrics(request: AnalyticsRequest = AnalyticsRequest()) -> ROI
                     'direct': 0.03,
                 }
                 
-                # Get multiplier for this source or use default
                 multiplier = investment_multipliers.get(source.lower().strip(), 0.15)
                 investment = revenue * multiplier
                 
-                # Calculate ROI: (Revenue - Investment) / Investment * 100
-                # Ensure we have valid values
                 if investment > 0 and revenue > 0:
                     roi = ((revenue - investment) / investment) * 100
-                    # Ensure ROI is a valid number
                     if pd.isna(roi) or not pd.isfinite(roi):
                         roi = 0.0
                 else:
@@ -631,10 +582,8 @@ async def get_roi_metrics(request: AnalyticsRequest = AnalyticsRequest()) -> ROI
                 
                 profit = revenue - investment
                 
-                # Calculate cost per acquisition
                 cpa = investment / customers if customers > 0 else (investment / transactions if transactions > 0 else 0)
                 
-                # Calculate conversion rate if we have data
                 conversion_rate = (customers / transactions * 100) if transactions > 0 else 0
                 
                 roi_metrics.append({
@@ -650,19 +599,15 @@ async def get_roi_metrics(request: AnalyticsRequest = AnalyticsRequest()) -> ROI
                     "conversion_rate": conversion_rate
                 })
         else:
-            # Fallback to channel if acquisition_source not available
             channel_data = data_service.get_channel_analytics(filters)
             for channel in channel_data.get('channel_performance', []):
-                # Try both 'revenue' and 'total_revenue' field names
                 revenue = float(channel.get('total_revenue', channel.get('revenue', 0)) or 0)
                 transactions = int(channel.get('transaction_count', channel.get('transactions', 0)) or 0)
                 
-                # Skip if no revenue
                 if revenue <= 0:
                     continue
                 
-                investment = revenue * 0.15  # Default 15% for marketing
-                # Calculate ROI with validation
+                investment = revenue * 0.15
                 if investment > 0 and revenue > 0:
                     roi = ((revenue - investment) / investment) * 100
                     if pd.isna(roi) or not pd.isfinite(roi):
@@ -678,17 +623,15 @@ async def get_roi_metrics(request: AnalyticsRequest = AnalyticsRequest()) -> ROI
                     "roi": roi,
                     "profit": profit,
                     "transactions": transactions,
-                    "customers": transactions,  # Approximate
+                    "customers": transactions,
                     "avg_transaction": revenue / transactions if transactions > 0 else 0,
                     "cpa": investment / transactions if transactions > 0 else 0,
                     "conversion_rate": 0
                 })
         
-        # Sort by ROI
         if len(roi_metrics) > 0:
             roi_metrics.sort(key=lambda x: x.get('roi', 0), reverse=True)
         else:
-            # If no ROI metrics, create fallback from channel data
             channel_data_fallback = data_service.get_channel_analytics(filters)
             for channel in channel_data_fallback.get('channel_performance', [])[:5]:
                 revenue = float(channel.get('total_revenue', channel.get('revenue', 0)) or 0)
@@ -746,7 +689,6 @@ async def get_roi_metrics(request: AnalyticsRequest = AnalyticsRequest()) -> ROI
         ai_analysis = ai_result.get("answer", "Анализ ROI метрик")
         best_opportunity = roi_metrics[0]['source'] if roi_metrics else None
         
-        # Extract best opportunity from AI analysis if mentioned
         if ai_analysis and roi_metrics:
             for metric in roi_metrics[:3]:
                 if metric['source'].lower() in ai_analysis.lower():

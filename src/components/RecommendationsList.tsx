@@ -141,12 +141,12 @@ const RecommendationsList = ({ recommendations }: RecommendationsListProps) => {
               <TableCell>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                   <Box sx={{ color: theme.palette.primary.main }}>
-                    {getIcon(rec.type)}
+              {getIcon(rec.type)}
                   </Box>
                   <Box>
                     <Typography variant="body2" fontWeight={600}>
-                      {rec.title}
-                    </Typography>
+                    {rec.title}
+                  </Typography>
                     {rec.segment && (
                       <Typography variant="caption" color="text.secondary">
                         Сегмент: {rec.segment}
@@ -156,19 +156,19 @@ const RecommendationsList = ({ recommendations }: RecommendationsListProps) => {
                 </Box>
               </TableCell>
               <TableCell align="center">
-                <Chip
-                  label={getTypeLabel(rec.type)}
-                  size="small"
-                  variant="outlined"
+                  <Chip
+                    label={getTypeLabel(rec.type)}
+                    size="small"
+                    variant="outlined"
                   sx={{ minWidth: 100 }}
-                />
+                  />
               </TableCell>
               <TableCell align="center">
-                <Chip
-                  label={getPriorityLabel(rec.priority)}
-                  size="small"
-                  color={getPriorityColor(rec.priority) as any}
-                />
+                  <Chip
+                    label={getPriorityLabel(rec.priority)}
+                    size="small"
+                    color={getPriorityColor(rec.priority) as any}
+                  />
               </TableCell>
               <TableCell align="right">
                 {rec.estimated_benefit ? (
@@ -206,7 +206,7 @@ const RecommendationsList = ({ recommendations }: RecommendationsListProps) => {
                 </Box>
               </TableCell>
             </TableRow>
-          ))}
+      ))}
         </TableBody>
       </Table>
     </TableContainer>

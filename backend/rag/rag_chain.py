@@ -12,14 +12,13 @@ class RAGChain:
     
     def __init__(self):
         import os
-        # Set environment variables to avoid langchain.verbose/debug attribute errors
         os.environ.setdefault("LANGCHAIN_VERBOSE", "false")
         os.environ.setdefault("LANGCHAIN_DEBUG", "false")
         
         llm_kwargs = {
             "model": settings.LLM_MODEL,
             "temperature": float(settings.TEMPERATURE) if settings.TEMPERATURE else 0.0,
-            "callbacks": [],  # Disable callbacks to avoid langchain attribute errors
+            "callbacks": [],
         }
         
         api_key = settings.API_KEY
@@ -36,13 +35,11 @@ class RAGChain:
             if not api_key:
                 raise ValueError("API_KEY is not set. Please set API_KEY in .env file.")
             
-            # Try to initialize LLM, handle langchain version issues
             try:
                 self.llm = ChatOpenAI(**llm_kwargs)
             except (AttributeError, TypeError) as e:
                 error_str = str(e)
                 if "verbose" in error_str or "debug" in error_str or "has no attribute" in error_str:
-                    # Remove problematic parameters and try with minimal config
                     minimal_kwargs = {
                         "model": llm_kwargs.get("model"),
                         "openai_api_key": llm_kwargs.get("openai_api_key"),
@@ -66,7 +63,7 @@ class RAGChain:
             self.llm = None
         
         self.vectorstore_manager = get_vectorstore_manager()
-        self._vectorstore_warning_shown = False  # Флаг чтобы показывать предупреждение только раз
+        self._vectorstore_warning_shown = False
         
         self.system_prompt = """Ты эксперт по финансовой аналитике и AI-ассистент, специализирующийся на аналитике цифровой экономики Казахстана.
 
@@ -134,10 +131,8 @@ class RAGChain:
                     raise ValueError("Vectorstore not initialized")
             except Exception as e:
                 error_msg = str(e)
-                # Скрываем детали API ключа из ошибок
                 if "API key" in error_msg or "401" in error_msg or "invalid_api_key" in error_msg or "Incorrect API key" in error_msg:
                     if not self._vectorstore_warning_shown:
-                        # Проверяем что это ошибка embeddings (OpenAI), а не DeepSeek
                         if "embedding" in error_msg.lower() or "openai" in error_msg.lower():
                             print("Note: Embeddings service unavailable (needs OpenAI API key for vectorstore). Using CSV fallback for data retrieval.")
                         else:
@@ -145,7 +140,6 @@ class RAGChain:
                         self._vectorstore_warning_shown = True
                     error_msg = "API key issue - using CSV fallback"
                 else:
-                    # Логируем только краткое сообщение, не полный traceback
                     if not self._vectorstore_warning_shown:
                         print(f"Vectorstore not available, using CSV fallback: {error_msg[:100]}")
                         self._vectorstore_warning_shown = True
@@ -213,10 +207,8 @@ Please provide a comprehensive answer based strictly on the provided context. If
                 raise ValueError("Vectorstore not initialized")
         except Exception as e:
             error_msg = str(e)
-            # Скрываем детали API ключа из ошибок
             if "API key" in error_msg or "401" in error_msg or "invalid_api_key" in error_msg or "Incorrect API key" in error_msg:
                 if not self._vectorstore_warning_shown:
-                    # Проверяем что это ошибка embeddings (OpenAI), а не DeepSeek
                     if "embedding" in error_msg.lower() or "openai" in error_msg.lower():
                         print("Note: Embeddings service unavailable (needs OpenAI API key for vectorstore). Using CSV fallback for data retrieval.")
                     else:
@@ -224,7 +216,6 @@ Please provide a comprehensive answer based strictly on the provided context. If
                     self._vectorstore_warning_shown = True
                 error_msg = "API key issue - using CSV fallback"
             else:
-                # Логируем только краткое сообщение
                 if not self._vectorstore_warning_shown:
                     print(f"Vectorstore not available, using CSV fallback: {error_msg[:100]}")
                     self._vectorstore_warning_shown = True
@@ -309,88 +300,61 @@ Response format:
 - Handle city name variations: Алматы/Алмата/Almaty -> 'Almaty', Астана/Astana -> 'Astana', Шымкент/Shymkent -> 'Shymkent'
 - Always use English city names from sample_cities list"""
 
-        schema_text = f"""Table Schema: {table_schema['table_name']}
-Total rows: {table_schema['total_rows']}
+        columns_info = table_schema.get('columns', [])
+        columns_text = "\n".join([f"- {col.get('name', 'unknown')}: {col.get('type', 'unknown')}" for col in columns_info])
+        
+        sample_cities = table_schema.get('sample_cities', [])
+        cities_text = ", ".join(sample_cities) if sample_cities else "N/A"
+        
+        schema_text = f"""Table Schema: {table_schema.get('table_name', 'transactions')}
+Total rows: {table_schema.get('total_rows', 0)}
 
 Columns:
-"""
-        for col in table_schema['columns']:
-            schema_text += f"- {col['name']}: {col['type']}"
-            if col.get('sample_values') and len(col['sample_values']) > 0:
-                samples = col['sample_values'][:5]
-                schema_text += f" (examples: {', '.join(map(str, samples))})"
-            schema_text += "\n"
-        
-        if table_schema.get('sample_cities'):
-            schema_text += f"\nSample cities in data: {', '.join(map(str, table_schema['sample_cities'][:15]))}\n"
-        if table_schema.get('sample_channels'):
-            schema_text += f"Sample channels: {', '.join(map(str, table_schema['sample_channels'][:10]))}\n"
-        if table_schema.get('sample_categories'):
-            schema_text += f"Sample categories: {', '.join(map(str, table_schema['sample_categories'][:10]))}\n"
-        
-        messages = [
-            SystemMessage(content=sql_system_prompt),
-            HumanMessage(content=f"""Table Schema:
+{columns_text}
+
+Sample cities: {cities_text}"""
+
+        user_message = f"""Question: {question}
+
 {schema_text}
 
-Question: {question}
+Generate a SQL query to answer this question. Return ONLY the SQL query, no explanations."""
 
-Generate a SQL SELECT query to answer this question. Return ONLY the SQL query, no additional text.""")
+        messages = [
+            SystemMessage(content=sql_system_prompt),
+            HumanMessage(content=user_message)
         ]
         
         if self.llm is None:
-            # Возвращаем простой SQL запрос как fallback
             return {
-                "sql_query": f"SELECT * FROM {table_schema.get('table_name', 'transactions')} LIMIT 100",
-                "explanation": "AI service unavailable. Please check API_KEY in .env file and ensure langchain-openai is installed. Returning basic query.",
+                "sql_query": f"SELECT * FROM transactions LIMIT 10",
+                "explanation": "AI service is not available. Please check API_KEY in .env file.",
                 "table_name": table_schema.get('table_name', 'transactions')
             }
         
-        response = self.llm.invoke(messages)
-        sql_query = response.content if hasattr(response, 'content') else str(response)
-        
-        sql_query = sql_query.strip()
-        
-        if sql_query.startswith("```sql"):
-            sql_query = sql_query[6:]
-        if sql_query.startswith("```"):
-            sql_query = sql_query[3:]
-        if sql_query.endswith("```"):
-            sql_query = sql_query[:-3]
-        sql_query = sql_query.strip()
-        
-        sql_query = sql_query.replace('\n', ' ')
-        sql_query = sql_query.replace('\r', ' ')
-        while '  ' in sql_query:
-            sql_query = sql_query.replace('  ', ' ')
-        
-        if sql_query.endswith(';'):
-            sql_query = sql_query[:-1]
-        sql_query = sql_query.strip()
-        
-        explanation_prompt = f"""Explain what this SQL query does in one sentence:
-
-{sql_query}
-
-Question: {question}
-
-Provide a brief explanation."""
-        
-        # Генерируем объяснение
         try:
-            explanation_response = self.llm.invoke([
-                SystemMessage(content="You are a SQL query explainer. Provide concise explanations."),
-                HumanMessage(content=explanation_prompt)
-            ])
-            explanation = explanation_response.content if hasattr(explanation_response, 'content') else str(explanation_response)
+            response = self.llm.invoke(messages)
+            answer = response.content if hasattr(response, 'content') else str(response)
+            
+            sql_query = answer.strip()
+            if sql_query.startswith("```sql"):
+                sql_query = sql_query.replace("```sql", "").replace("```", "").strip()
+            elif sql_query.startswith("```"):
+                sql_query = sql_query.replace("```", "").strip()
+            
+            explanation = f"Generated SQL query for: {question}"
+            
+            return {
+                "sql_query": sql_query,
+                "explanation": explanation,
+                "table_name": table_schema.get('table_name', 'transactions')
+            }
         except Exception as e:
-            explanation = f"SQL query for: {question}"
-        
-        return {
-            "sql_query": sql_query,
-            "explanation": explanation.strip(),
-            "table_name": table_schema['table_name']
-        }
+            return {
+                "sql_query": f"SELECT * FROM transactions LIMIT 10",
+                "explanation": f"Error generating SQL: {str(e)}",
+                "table_name": table_schema.get('table_name', 'transactions')
+            }
 
 _rag_chain = None
 
@@ -399,4 +363,3 @@ def get_rag_chain() -> RAGChain:
     if _rag_chain is None:
         _rag_chain = RAGChain()
     return _rag_chain
-

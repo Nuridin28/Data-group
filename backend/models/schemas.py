@@ -49,7 +49,6 @@ class AnalyticsRequest(BaseModel):
     channel: Optional[str] = Field(default=None, description="Filter by channel")
     
     class Config:
-        # Allow empty body for POST requests
         json_schema_extra = {
             "example": {}
         }

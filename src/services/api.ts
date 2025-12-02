@@ -11,7 +11,7 @@ const api = axios.create({
 });
 
 
-// Загрузка CSV файла
+
 export const uploadCSV = async (file: File): Promise<{ message: string; file_id: string }> => {
   const formData = new FormData();
   formData.append('file', file);
@@ -29,11 +29,11 @@ export const uploadCSV = async (file: File): Promise<{ message: string; file_id:
   }
 };
 
-// Получение аналитики - объединяем данные из разных эндпоинтов
+
 export const getAnalytics = async (_fileId?: string): Promise<AnalyticsResponse> => {
   try {
     console.log('getAnalytics called');
-    // Запрашиваем данные из разных эндпоинтов бэкенда
+    
     const emptyBody = {};
     const [revenueRes, channelsRes, retentionRes, suspiciousRes, roiRes] = await Promise.all([
       api.post('/analytics/revenue', emptyBody).catch((e) => {
@@ -71,14 +71,14 @@ export const getAnalytics = async (_fileId?: string): Promise<AnalyticsResponse>
     const suspiciousData = suspiciousRes.data;
     const roiData = roiRes.data;
 
-    // Преобразуем revenue_by_date в revenue_trend
+    
     const revenue_trend = revenueData?.revenue_by_date?.map((item: any) => ({
       date: item.date || item.Date || Object.keys(item)[0],
       revenue: item.revenue || item.amount || item.value || 0,
       transactions_count: item.count || item.transactions || 0
     })) || [];
 
-    // Преобразуем channel_performance в revenue_by_channel
+    
     const revenue_by_channel = channelsData?.channel_performance?.map((item: any) => ({
       channel: item.channel || item.name || 'Unknown',
       revenue: item.revenue || item.total_revenue || item.amount || 0,
@@ -88,7 +88,7 @@ export const getAnalytics = async (_fileId?: string): Promise<AnalyticsResponse>
       conversion_rate: item.conversion_rate || item.conversion || 0
     })) || [];
 
-    // Преобразуем retention данные - используем правильную структуру
+    
     const cohort_analysis = retentionData?.customer_segment_retention?.map((item: any, index: number) => ({
       cohort: item.cohort || item.segment || item.customer_segment || `Cohort ${index}`,
       period: typeof item.period === 'number' ? item.period : (item.period || 0),
@@ -96,7 +96,7 @@ export const getAnalytics = async (_fileId?: string): Promise<AnalyticsResponse>
       customers: item.customers || item.count || item.unique_customers || 0
     })) || [];
 
-    // ROI метрики - получаем из нового эндпоинта с LLM анализом по источникам привлечения
+    
     let roi_metrics = [];
     if (roiData?.roi_metrics && Array.isArray(roiData.roi_metrics)) {
       roi_metrics = roiData.roi_metrics.map((metric: any) => ({
@@ -112,33 +112,33 @@ export const getAnalytics = async (_fileId?: string): Promise<AnalyticsResponse>
         conversion_rate: metric.conversion_rate
       }));
     } else {
-      // Fallback если эндпоинт не доступен - используем каналы
+      
       roi_metrics = revenue_by_channel.map((channel: any) => ({
-        source: channel.channel,
-        investment: channel.revenue * 0.15, // 15% для маркетинга
-        revenue: channel.revenue,
+      source: channel.channel,
+        investment: channel.revenue * 0.15, 
+      revenue: channel.revenue,
         roi: channel.roi || 0,
         profit: channel.revenue - (channel.revenue * 0.15),
         transactions: channel.transactions,
         customers: channel.customers
-      }));
+    }));
     }
 
-    // Summary из revenue данных
+    
     const summary = {
       total_revenue: revenueData?.total_revenue || 0,
       total_transactions: revenueData?.transaction_count || 0,
       active_customers: retentionData?.retention_rate ? Math.round(revenueData?.transaction_count * retentionData.retention_rate / 100) : 0,
       avg_transaction_value: revenueData?.average_transaction || 0,
-      cancellation_rate: 0 // Будет из прогнозов
+      cancellation_rate: 0 
     };
 
-    // Аномалии из suspicious - используем данные от модели с LLM анализом на русском
+    
     const anomalies = suspiciousData?.suspicious_transactions?.slice(0, 100).map((item: any, index: number) => {
       const anomalyScore = item.anomaly_score || item.risk_score || item.suspicious_score || 0.5;
       const riskScore = item.risk_score || item.anomaly_score || 0.5;
       
-      // Определяем risk_level на основе score
+      
       let riskLevel: 'low' | 'medium' | 'high' = 'medium';
       if (anomalyScore > 0.8 || riskScore > 0.8) {
         riskLevel = 'high';
@@ -149,19 +149,19 @@ export const getAnalytics = async (_fileId?: string): Promise<AnalyticsResponse>
       }
       
       return {
-        transaction_id: String(item.transaction_id || item.id || `txn_${index}`),
-        date: item.date || item.transaction_date || new Date().toISOString(),
-        amount: item.amount_kzt || item.amount || 0,
+      transaction_id: String(item.transaction_id || item.id || `txn_${index}`),
+      date: item.date || item.transaction_date || new Date().toISOString(),
+      amount: item.amount_kzt || item.amount || 0,
         anomaly_score: anomalyScore,
         risk_score: riskScore,
-        reason: item.reason || item.risk_factors?.join(', ') || 'Обнаружена аномалия моделью ML',
+      reason: item.reason || item.risk_factors?.join(', ') || 'Обнаружена аномалия моделью ML',
         risk_level: (item.risk_level || riskLevel) as 'low' | 'medium' | 'high',
-        city: item.city,
-        channel: item.channel,
-        payment_method: item.payment_method,
-        merchant_category: item.merchant_category,
-        is_refunded: item.is_refunded,
-        is_canceled: item.is_canceled
+      city: item.city,
+      channel: item.channel,
+      payment_method: item.payment_method,
+      merchant_category: item.merchant_category,
+      is_refunded: item.is_refunded,
+      is_canceled: item.is_canceled
       };
     }) || [];
 
@@ -189,7 +189,7 @@ export const getAnalytics = async (_fileId?: string): Promise<AnalyticsResponse>
   }
 };
 
-// Прогнозы
+
 export const getForecasts = async (_fileId?: string, days: number = 30): Promise<AnalyticsResponse['forecasts']> => {
   try {
     const response = await api.post('/predict/transactions', {
@@ -200,7 +200,7 @@ export const getForecasts = async (_fileId?: string, days: number = 30): Promise
     
     const data = response.data;
     
-    // Преобразуем predicted_volume в revenue_forecast
+    
     const revenue_forecast = data?.predicted_volume?.map((item: any) => ({
       date: item.date || item.Date || new Date().toISOString(),
       predicted: item.predicted_revenue || item.revenue || item.amount || 0,
@@ -208,7 +208,7 @@ export const getForecasts = async (_fileId?: string, days: number = 30): Promise
       upper_bound: item.upper_bound || (item.predicted_revenue ? item.predicted_revenue * 1.2 : 0)
     })) || [];
 
-    // Получаем вероятность отмены
+    
     const cancellationResponse = await api.post('/predict/cancellation', {
       amount_kzt: 1000,
       channel: 'Kaspi QR',
@@ -227,7 +227,7 @@ export const getForecasts = async (_fileId?: string, days: number = 30): Promise
   }
 };
 
-// Аномалии
+
 export const getAnomalies = async (_fileId?: string): Promise<AnalyticsResponse['anomalies']> => {
   try {
     const response = await api.post('/predict/suspicious', {
@@ -254,16 +254,16 @@ export const getAnomalies = async (_fileId?: string): Promise<AnalyticsResponse[
   }
 };
 
-// Рекомендации - используем новый эндпоинт с LLM анализом
+
 export const getRecommendations = async (_fileId?: string): Promise<AnalyticsResponse['recommendations']> => {
   try {
     const response = await api.post('/analytics/recommendations', {});
-    
+
     const data = response.data;
-    
+
     console.log('[Recommendations] Received data:', data);
+
     
-    // Преобразуем ответ из нового эндпоинта
     if (data?.recommendations && Array.isArray(data.recommendations) && data.recommendations.length > 0) {
       const mapped = data.recommendations.map((rec: any) => ({
         id: rec.id || `rec_${Math.random()}`,
@@ -279,18 +279,18 @@ export const getRecommendations = async (_fileId?: string): Promise<AnalyticsRes
       console.log(`[Recommendations] Mapped ${mapped.length} recommendations`);
       return mapped;
     }
-    
+
     console.warn('[Recommendations] No recommendations in response, returning empty array');
     return [];
   } catch (error: any) {
     console.error('Error getting recommendations:', error);
-    // Не бросаем ошибку, возвращаем пустой массив чтобы не ломать UI
+    
     console.warn('[Recommendations] Returning empty array due to error');
     return [];
   }
 };
 
-// AI Чат - используем новый эндпоинт /chat
+
 export const sendChatMessage = async (
   message: string,
   _fileId?: string,
@@ -299,7 +299,7 @@ export const sendChatMessage = async (
   try {
     console.log('Sending chat message to /chat:', message);
     
-    // Пробуем использовать новый эндпоинт /chat
+    
     let response;
     try {
       response = await api.post('/chat', {
@@ -307,24 +307,24 @@ export const sendChatMessage = async (
       });
     } catch (chatError: any) {
       console.warn('Chat endpoint failed, trying /ask:', chatError.message);
-      // Fallback to /ask
+      
       response = await api.post('/ask', {
         question: message
       });
     }
     
-    // Обрабатываем разные форматы ответа
+    
     let answer = "";
     if (response.data) {
-      // QuestionResponse format from /chat
+      
       if (response.data.answer) {
         answer = response.data.answer;
       }
-      // SQLResponse format from /ask
+      
       else if (response.data.explanation) {
         answer = response.data.explanation;
       }
-      // Fallback to sql_query
+      
       else if (response.data.sql_query) {
         answer = response.data.sql_query;
       }

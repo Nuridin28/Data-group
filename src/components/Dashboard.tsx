@@ -72,16 +72,16 @@ const Dashboard = ({ data: initialData, fileId, onReset }: DashboardProps) => {
   };
 
   useEffect(() => {
-    // Load additional data on mount
+    
     if (fileId && (!data.forecasts || !data.anomalies || !data.recommendations || (Array.isArray(data.recommendations) && data.recommendations.length === 0))) {
       console.log('[Dashboard] Loading recommendations for fileId:', fileId);
       refreshData();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    
   }, [fileId]);
 
   const handleDownloadReport = () => {
-    // Ensure we have at least the default message
+    
     const messagesToExport = chatMessages.length > 0 ? chatMessages : [
       {
         id: '1',
@@ -105,7 +105,7 @@ const Dashboard = ({ data: initialData, fileId, onReset }: DashboardProps) => {
 
   return (
     <Box sx={{ position: 'relative' }}>
-      {/* Header */}
+      {}
       <Box 
         sx={{ 
           display: 'flex', 
@@ -236,12 +236,12 @@ const Dashboard = ({ data: initialData, fileId, onReset }: DashboardProps) => {
       </Box>
 
       <Grid container spacing={3}>
-        {/* Summary Cards */}
+        {}
         <Grid item xs={12}>
           <SummaryCards summary={data.summary} />
         </Grid>
 
-        {/* Revenue Trend */}
+        {}
         <Grid item xs={12} lg={chatOpen && !isMobile ? 8 : 12}>
           <Paper 
             sx={{ 
@@ -267,7 +267,7 @@ const Dashboard = ({ data: initialData, fileId, onReset }: DashboardProps) => {
           </Paper>
         </Grid>
 
-        {/* Forecast */}
+        {}
         {data.forecasts && data.forecasts.revenue_forecast && data.forecasts.revenue_forecast.length > 0 && (
           <Grid item xs={12} lg={chatOpen && !isMobile ? 8 : 12}>
             <Paper 
@@ -295,7 +295,7 @@ const Dashboard = ({ data: initialData, fileId, onReset }: DashboardProps) => {
           </Grid>
         )}
 
-        {/* Channel Comparison */}
+        {}
         <Grid item xs={12} md={12} lg={chatOpen && !isMobile ? 4 : 12}>
           <Paper 
             sx={{ 
@@ -320,35 +320,10 @@ const Dashboard = ({ data: initialData, fileId, onReset }: DashboardProps) => {
           </Paper>
         </Grid>
 
-        {/* ROI Metrics */}
-        {/* <Grid item xs={12} md={6} lg={chatOpen && !isMobile ? 4 : 6}>
-          <Paper 
-            sx={{ 
-              p: 3, 
-              height: '100%',
-              border: '1px solid',
-              borderColor: 'divider',
-            }}
-          >
-            <Typography 
-              variant="h6" 
-              gutterBottom 
-              sx={{ 
-                fontWeight: 700,
-                color: 'text.primary',
-                mb: 2,
-              }}
-            >
-              ROI по источникам привлечения клиентов
-            </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Эффективность маркетинговых каналов
-            </Typography>
-            <ROIMetrics data={data.roi_metrics} />
-          </Paper>
-        </Grid> */}
+        {}
+/}
 
-        {/* Cohort Analysis */}
+        {}
         <Grid item xs={12} lg={chatOpen && !isMobile ? 8 : 12}>
           <Paper 
             sx={{ 
@@ -373,7 +348,7 @@ const Dashboard = ({ data: initialData, fileId, onReset }: DashboardProps) => {
           </Paper>
         </Grid>
 
-        {/* Anomalies */}
+        {}
         {data.anomalies && Array.isArray(data.anomalies) && data.anomalies.length > 0 && (
           <Grid item xs={12} lg={chatOpen && !isMobile ? 8 : 12}>
             <Paper 
@@ -400,7 +375,7 @@ const Dashboard = ({ data: initialData, fileId, onReset }: DashboardProps) => {
           </Grid>
         )}
 
-        {/* Recommendations - Show on button click */}
+        {}
         {recommendationsOpen && (
           <Grid item xs={12} lg={chatOpen && !isMobile ? 8 : 12}>
             <Paper 
@@ -446,7 +421,7 @@ const Dashboard = ({ data: initialData, fileId, onReset }: DashboardProps) => {
         )}
       </Grid>
 
-      {/* AI Chat Bot Drawer */}
+      {}
       <Drawer
         anchor="right"
         open={chatOpen}

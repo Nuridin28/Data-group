@@ -1,7 +1,7 @@
 import type { ChatMessage, AnalyticsResponse } from '../types';
 import { formatCurrency, formatNumber, formatPercentage, formatDateTime } from './format';
 
-// Helper function to escape HTML
+
 const escapeHtml = (text: string): string => {
   const map: { [key: string]: string } = {
     '&': '&amp;',
@@ -13,25 +13,19 @@ const escapeHtml = (text: string): string => {
   return text.replace(/[&<>"']/g, (m) => map[m]);
 };
 
-// Convert markdown-like text to HTML
 const markdownToHtml = (text: string): string => {
   let html = escapeHtml(text);
   
-  // Convert headers
   html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>');
   html = html.replace(/^## (.*$)/gim, '<h2>$1</h2>');
   html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>');
   
-  // Convert bold
   html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
   
-  // Convert italic
   html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
   
-  // Convert code blocks
   html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
   
-  // Convert bullet lists
   const lines = html.split('\n');
   const processedLines: string[] = [];
   let inList = false;
@@ -61,7 +55,6 @@ const markdownToHtml = (text: string): string => {
   
   html = processedLines.join('\n');
   
-  // Convert line breaks
   html = html.replace(/\n/g, '<br>');
   
   return html;

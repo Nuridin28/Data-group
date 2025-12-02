@@ -172,63 +172,53 @@ class DataService:
                 "retention_rate": 0.0
             }
         
-        # Ensure date is datetime
         if 'date' in valid_transactions.columns:
             valid_transactions['date'] = pd.to_datetime(valid_transactions['date'], errors='coerce')
             valid_transactions = valid_transactions.dropna(subset=['date'])
         
         segment_retention = []
         
-        # Calculate real retention by customer segment over time periods
         if 'customer_segment' in valid_transactions.columns and 'date' in valid_transactions.columns and len(valid_transactions) > 0:
-            # Get unique segments
             segments = valid_transactions['customer_segment'].dropna().unique()
             
-            # Calculate retention by period for each segment
             date_range = (valid_transactions['date'].max() - valid_transactions['date'].min()).days if len(valid_transactions) > 0 else 0
-            num_periods = max(4, min(12, date_range // 30)) if date_range > 0 else 4  # 4-12 periods
+            num_periods = max(4, min(12, date_range // 30)) if date_range > 0 else 4
             
-            for segment in segments[:20]:  # Limit to top 20 segments
+            for segment in segments[:20]:
                 segment_data = valid_transactions[valid_transactions['customer_segment'] == segment].copy()
                 
                 if len(segment_data) == 0:
                     continue
                 
-                # Group by time periods
                 segment_data['period'] = pd.cut(
                     (segment_data['date'] - segment_data['date'].min()).dt.days,
                     bins=num_periods,
                     labels=range(num_periods)
                 )
                 
-                # Calculate retention metrics per period
                 try:
                     period_stats = segment_data.groupby('period', observed=True).agg({
-                        'transaction_id': 'nunique',  # Unique transactions
+                        'transaction_id': 'nunique',
                         'amount_kzt': ['sum', 'mean', 'count']
                     }).reset_index()
                 except Exception as e:
                     print(f"Error grouping by period: {e}")
                     period_stats = pd.DataFrame()
                 
-                # Get initial cohort size (first period)
                 first_period_data = segment_data[segment_data['period'] == 0] if 'period' in segment_data.columns else pd.DataFrame()
                 initial_customers = first_period_data['transaction_id'].nunique() if len(first_period_data) > 0 and 'transaction_id' in first_period_data.columns else 0
                 
                 for period_idx in range(num_periods):
                     if len(period_stats) == 0:
-                        # No period stats, create empty entry
                         period_data = pd.DataFrame()
                     else:
                         period_data = period_stats[period_stats['period'] == period_idx]
                     
-                    # Initialize default values
                     current_customers = 0
                     revenue = 0.0
                     transaction_count = 0
                     
                     if len(period_data) > 0 and 'transaction_id' in period_data.columns:
-                        # Handle multi-level column names from agg
                         if isinstance(period_data.columns, pd.MultiIndex):
                             current_customers = int(period_data[('transaction_id', 'nunique')].iloc[0]) if ('transaction_id', 'nunique') in period_data.columns else 0
                             revenue = float(period_data[('amount_kzt', 'sum')].iloc[0]) if ('amount_kzt', 'sum') in period_data.columns else 0.0
@@ -238,13 +228,11 @@ class DataService:
                             revenue = float(period_data.get('amount_kzt', pd.Series([0]))[0]) if 'amount_kzt' in period_data.columns and len(period_data) > 0 else 0.0
                             transaction_count = len(segment_data[segment_data['period'] == period_idx]) if 'period' in segment_data.columns else 0
                     
-                    # Calculate retention rate
                     if initial_customers > 0:
                         retention = (current_customers / initial_customers * 100) if period_idx == 0 else (current_customers / max(initial_customers, 1) * 100)
                     else:
                         retention = 100.0 if current_customers > 0 else 0.0
                     
-                    # Append retention data for this period
                     segment_retention.append({
                         "cohort": str(segment),
                         "segment": str(segment),
@@ -257,11 +245,9 @@ class DataService:
                         "transactions": int(transaction_count)
                     })
         
-        # If no segment data, create fallback based on time periods
         if len(segment_retention) == 0 and 'date' in valid_transactions.columns and len(valid_transactions) > 0:
-            # Create time-based cohorts
             valid_transactions['cohort_month'] = valid_transactions['date'].dt.to_period('M').astype(str)
-            cohorts = valid_transactions['cohort_month'].unique()[:12]  # Last 12 months
+            cohorts = valid_transactions['cohort_month'].unique()[:12]
             
             for cohort_idx, cohort in enumerate(cohorts):
                 cohort_data = valid_transactions[valid_transactions['cohort_month'] == cohort]
@@ -279,7 +265,6 @@ class DataService:
                     "transactions": len(cohort_data)
                 })
         
-        # Acquisition source performance
         acquisition_performance = []
         if 'acquisition_source' in valid_transactions.columns:
             acquisition_stats = valid_transactions.groupby('acquisition_source').agg({
@@ -290,7 +275,6 @@ class DataService:
             acquisition_stats = acquisition_stats.sort_values('total_revenue', ascending=False)
             acquisition_performance = acquisition_stats.to_dict('records')
         
-        # Overall retention rate
         total_transactions = len(df)
         refunded = df['is_refunded'].sum() if 'is_refunded' in df.columns else 0
         canceled = df['is_canceled'].sum() if 'is_canceled' in df.columns else 0
@@ -412,23 +396,18 @@ class DataService:
                     df = df[df['merchant_category'].astype(str).str.contains(category, case=False, na=False)]
                 break
         
-        # If no specific filters were applied, return diverse sample across different dates
         if len(df) == original_count and len(df) > limit:
-            # No filters applied - return diverse sample across time periods
             if 'date' in df.columns and not df['date'].isna().all():
-                # Try to get diverse sample across different time periods (months/weeks)
                 df['year_month'] = df['date'].dt.to_period('M').astype(str)
                 unique_periods = df['year_month'].nunique()
                 
                 if unique_periods > 1:
-                    # Sample from different months to get diverse data across the year
-                    samples_per_period = max(1, limit // min(unique_periods, 12))  # Sample from up to 12 months
+                    samples_per_period = max(1, limit // min(unique_periods, 12))
                     sampled_dfs = []
                     
-                    # Get periods sorted by date to ensure we cover the whole year
                     periods = sorted(df['year_month'].dropna().unique())
                     
-                    for period in periods[:12]:  # Limit to 12 months for performance
+                    for period in periods[:12]:
                         period_data = df[df['year_month'] == period]
                         if len(period_data) > 0:
                             sample_size = min(samples_per_period, len(period_data))
@@ -436,24 +415,19 @@ class DataService:
                     
                     if sampled_dfs:
                         df = pd.concat(sampled_dfs, ignore_index=True)
-                        # If we still have more than limit, sample from the diverse set
                         if len(df) > limit:
                             df = df.sample(n=limit, random_state=42)
                     else:
                         df = df.sample(min(limit, len(df)), random_state=42)
                 else:
-                    # Try by individual dates if months don't work
                     df['date_only'] = df['date'].dt.date
                     unique_dates = df['date_only'].nunique()
                     
                     if unique_dates > 1:
-                        # Sample from different dates, spread across the year
                         samples_per_date = max(1, limit // min(unique_dates, 30))
                         sampled_dfs = []
                         
-                        # Get dates spread across the year, not just first ones
                         dates = sorted(df['date_only'].dropna().unique())
-                        # Take dates spread across the year
                         if len(dates) > 30:
                             step = len(dates) // 30
                             selected_dates = dates[::step][:30]
@@ -473,13 +447,10 @@ class DataService:
                         else:
                             df = df.sample(min(limit, len(df)), random_state=42)
                     else:
-                        # All same date, just sample randomly
                         df = df.sample(min(limit, len(df)), random_state=42)
             else:
-                # No date column, sample randomly
                 df = df.sample(min(limit, len(df)), random_state=42)
         elif len(df) == 0:
-            # No results from filters, fallback to original data
             if year_match and 'date' in self.df.columns:
                 df = self.df.copy()
                 if found_city:
@@ -494,7 +465,6 @@ class DataService:
                                     if len(city_contains) > 0:
                                         df = city_contains
                             break
-                # Use diverse sampling for fallback too
                 if 'date' in df.columns and len(df) > limit:
                     df['year_month'] = df['date'].dt.to_period('M').astype(str)
                     unique_periods = df['year_month'].nunique()
@@ -521,13 +491,11 @@ class DataService:
                 else:
                     df = df.head(limit) if len(df) <= limit else df.sample(n=limit, random_state=42)
         elif len(df) > limit:
-            # Filters applied but still too many results - use diverse sampling
             if 'date' in df.columns and not df['date'].isna().all():
                 df['year_month'] = df['date'].dt.to_period('M').astype(str)
                 unique_periods = df['year_month'].nunique()
                 
                 if unique_periods > 1:
-                    # Sample from different months
                     samples_per_period = max(1, limit // min(unique_periods, 12))
                     sampled_dfs = []
                     periods = sorted(df['year_month'].dropna().unique())
@@ -549,7 +517,6 @@ class DataService:
             else:
                 df = df.sample(min(limit, len(df)), random_state=42)
         
-        # Clean up temporary columns
         for col in ['date_only', 'year_month']:
             if col in df.columns:
                 df = df.drop(col, axis=1)
@@ -607,18 +574,14 @@ def get_data_service() -> DataService:
     return _data_service
 
 def reload_data_service(data_file: str = None) -> DataService:
-    """Перезагрузить data service с новым файлом"""
     global _data_service
     
-    # Сохраняем оригинальный файл если не указан новый
     if data_file is None:
         data_file = settings.DATA_FILE
     
-    # Проверяем что файл существует
     if not os.path.exists(data_file):
         raise FileNotFoundError(f"Data file not found: {data_file}")
     
-    # Создаем новый экземпляр с указанным файлом
     try:
         _data_service = DataService(data_file=data_file)
         print(f"Data service reloaded with file: {data_file}")

@@ -65,10 +65,8 @@ class PredictionService:
     def _train_suspicious_model(self) -> None:
         df = self.data_service.get_dataframe()
         
-        # Используем только базовые числовые колонки, которые всегда есть
         feature_columns = ['amount_kzt', 'is_refunded', 'is_canceled']
         
-        # Добавляем channel_encoded если есть channel
         if 'channel' in df.columns:
             try:
                 le_channel = LabelEncoder()
@@ -80,10 +78,8 @@ class PredictionService:
                 print(f"Warning: Could not encode channel: {e}")
                 self.channel_encoder = None
         
-        # Используем только существующие колонки
         available_cols = [col for col in feature_columns if col in df.columns or (col == 'channel_encoded' and 'channel' in df.columns)]
         
-        # Создаем X с нужными колонками
         X = df.copy()
         if 'channel_encoded' in available_cols and 'channel_encoded' not in X.columns and 'channel' in X.columns:
             if hasattr(self, 'channel_encoder') and self.channel_encoder is not None:
@@ -281,17 +277,14 @@ class PredictionService:
         anomaly_scores = {}
         model_reasons = {}
         
-        # Calculate statistical baselines
         avg_amount = df['amount_kzt'].mean() if 'amount_kzt' in df.columns else 0
         std_amount = df['amount_kzt'].std() if 'amount_kzt' in df.columns else 0
         median_amount = df['amount_kzt'].median() if 'amount_kzt' in df.columns else 0
         
-        # Use ML model if available
         if self.suspicious_model is not None and len(self.suspicious_feature_columns) > 0:
             try:
                 X = df.copy()
                 
-                # Create channel_encoded if needed
                 if 'channel_encoded' in self.suspicious_feature_columns and 'channel' in X.columns and 'channel_encoded' not in X.columns:
                     if hasattr(self, 'channel_encoder') and self.channel_encoder is not None:
                         try:
@@ -315,13 +308,10 @@ class PredictionService:
                     X_clean = X[mask]
                     
                     if len(X_clean) > 0:
-                        # Get predictions and decision function scores
                         predictions = self.suspicious_model.predict(X_clean)
                         
-                        # Try to get anomaly scores
                         if hasattr(self.suspicious_model, 'decision_function'):
                             scores = self.suspicious_model.decision_function(X_clean)
-                            # Convert to 0-1 scale where lower is more anomalous
                             min_score = scores.min()
                             max_score = scores.max()
                             if max_score > min_score:
@@ -330,7 +320,6 @@ class PredictionService:
                                 normalized_scores = [0.5] * len(scores)
                         elif hasattr(self.suspicious_model, 'score_samples'):
                             scores = self.suspicious_model.score_samples(X_clean)
-                            # IsolationForest: lower scores = more anomalous
                             min_score = scores.min()
                             max_score = scores.max()
                             if max_score > min_score:
@@ -340,13 +329,11 @@ class PredictionService:
                         else:
                             normalized_scores = [0.7 if p == -1 else 0.3 for p in predictions]
                         
-                        # Store scores and reasons
                         for idx, (orig_idx, pred, score) in enumerate(zip(X_clean.index, predictions, normalized_scores)):
-                            if pred == -1:  # Anomaly
+                            if pred == -1:
                                 suspicious_indices.append(orig_idx)
                                 anomaly_scores[orig_idx] = float(score)
                                 
-                                # Generate reason based on features
                                 reasons = []
                                 row = df.loc[orig_idx]
                                 
@@ -382,10 +369,8 @@ class PredictionService:
             except Exception as e:
                 print(f"Error in ML suspicious detection: {e}")
         
-        # Rule-based detection with detailed reasons
         suspicious_df_list = []
         
-        # High amount transactions
         amount_threshold_99 = df['amount_kzt'].quantile(0.99) if 'amount_kzt' in df.columns else 0
         amount_threshold_95 = df['amount_kzt'].quantile(0.95) if 'amount_kzt' in df.columns else 0
         
@@ -399,7 +384,6 @@ class PredictionService:
                 model_reasons[idx] = f"Экстремально высокая сумма транзакции ({amount:,.0f} KZT) - выше {percentile:.1f}% всех транзакций"
                 suspicious_df_list.append((idx, row))
         
-        # High-value refunded transactions
         refunded_high = df[(df['is_refunded'] == 1) & (df['amount_kzt'] > amount_threshold_95)] if all(col in df.columns for col in ['is_refunded', 'amount_kzt']) else pd.DataFrame()
         for idx, row in refunded_high.iterrows():
             if idx not in suspicious_indices:
@@ -409,7 +393,6 @@ class PredictionService:
                 model_reasons[idx] = f"Высокозначимая транзакция ({amount:,.0f} KZT) была возвращена - возможное мошенничество или ошибка"
                 suspicious_df_list.append((idx, row))
         
-        # High-value canceled transactions
         canceled_high = df[(df['is_canceled'] == 1) & (df['amount_kzt'] > amount_threshold_95)] if all(col in df.columns for col in ['is_canceled', 'amount_kzt']) else pd.DataFrame()
         for idx, row in canceled_high.iterrows():
             if idx not in suspicious_indices:
@@ -419,13 +402,11 @@ class PredictionService:
                 model_reasons[idx] = f"Высокозначимая транзакция ({amount:,.0f} KZT) была отменена - подозрительная активность"
                 suspicious_df_list.append((idx, row))
         
-        # Rapid repeated transactions (potential card testing)
         if 'transaction_id' in df.columns and 'date' in df.columns:
             df_with_date = df.copy()
             if df_with_date['date'].dtype != 'datetime64[ns]':
                 df_with_date['date'] = pd.to_datetime(df_with_date['date'], errors='coerce')
             
-            # Group by potential customer identifier (if available)
             customer_col = None
             for col in ['customer_id', 'merchant_id', 'payment_method']:
                 if col in df.columns:
@@ -436,7 +417,7 @@ class PredictionService:
                 rapid_transactions = df_with_date.groupby([customer_col, df_with_date['date'].dt.date]).size()
                 rapid_customers = rapid_transactions[rapid_transactions > 10].index.get_level_values(0).unique()
                 
-                for customer in rapid_customers[:50]:  # Limit to avoid too many
+                for customer in rapid_customers[:50]:
                     customer_txns = df_with_date[df_with_date[customer_col] == customer]
                     for idx, row in customer_txns.iterrows():
                         if idx not in suspicious_indices and len(customer_txns) > 10:
@@ -444,9 +425,8 @@ class PredictionService:
                             anomaly_scores[idx] = 0.75
                             model_reasons[idx] = f"Подозрительно большое количество транзакций ({len(customer_txns)}) за короткий период - возможное тестирование карт"
                             suspicious_df_list.append((idx, row))
-                            break  # Only flag one per customer
+                            break
         
-        # Combine all suspicious transactions
         suspicious_df = df.loc[suspicious_indices[:limit]].copy() if suspicious_indices else pd.DataFrame()
         
         suspicious_transactions = []
@@ -454,7 +434,6 @@ class PredictionService:
             score = anomaly_scores.get(idx, 0.5)
             reason = model_reasons.get(idx, "Обнаружена аномалия в данных транзакции")
             
-            # Determine risk level
             if score >= 0.8:
                 risk_level = "high"
             elif score >= 0.6:
@@ -479,10 +458,8 @@ class PredictionService:
                 "risk_level": risk_level
             })
         
-        # Sort by anomaly score descending
         suspicious_transactions.sort(key=lambda x: x.get('anomaly_score', 0), reverse=True)
         
-        # Generate risk factors summary
         risk_factors = []
         if len(high_amount) > 0:
             risk_factors.append({
@@ -506,7 +483,6 @@ class PredictionService:
                 "severity": "medium"
             })
         
-        # Calculate model insights
         model_insights = f"Проанализировано {len(df)} транзакций. Обнаружено {len(suspicious_transactions)} подозрительных операций. "
         if self.suspicious_model is not None:
             model_insights += "Использована ML-модель Isolation Forest для детекции аномалий. "

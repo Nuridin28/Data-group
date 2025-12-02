@@ -28,7 +28,7 @@ const CohortAnalysis = ({ data }: CohortAnalysisProps) => {
     );
   }
 
-  // Group by cohort
+  
   const cohortMap = new Map<string, CohortData[]>();
   data.forEach((item) => {
     const cohortKey = item.cohort || 'Unknown';
@@ -38,8 +38,8 @@ const CohortAnalysis = ({ data }: CohortAnalysisProps) => {
     cohortMap.get(cohortKey)!.push(item);
   });
 
-  // Transform data for heatmap-like visualization
-  const cohorts = Array.from(cohortMap.keys()).slice(0, 10); // Limit to top 10 cohorts
+  
+  const cohorts = Array.from(cohortMap.keys()).slice(0, 10); 
   const maxPeriod = data.length > 0 ? Math.max(...data.map((d) => d.period || 0), 0) : 0;
 
   const chartData = Array.from({ length: Math.max(maxPeriod + 1, 1) }, (_, period) => {

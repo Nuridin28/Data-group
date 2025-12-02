@@ -16,8 +16,6 @@ class VectorStoreManager:
     def __init__(self):
         embedding_kwargs = {"model": settings.EMBEDDING_MODEL}
         
-        # Для embeddings нужен OpenAI API key, не DeepSeek
-        # Используем OPENAI_API_KEY если есть, иначе пробуем API_KEY
         embedding_api_key = settings.OPENAI_API_KEY or settings.API_KEY
         if embedding_api_key:
             embedding_kwargs["openai_api_key"] = embedding_api_key
@@ -26,8 +24,6 @@ class VectorStoreManager:
             self.embeddings = OpenAIEmbeddings(**embedding_kwargs)
         except Exception as e:
             print(f"Warning: Could not initialize embeddings: {str(e)[:100]}")
-            # Если embeddings не инициализированы, vectorstore не будет работать
-            # но это не критично - есть CSV fallback
             self.embeddings = None
         self.vectorstore = None
         self.collection_name = "financial_transactions"
@@ -110,16 +106,13 @@ class VectorStoreManager:
                     raise ValueError("Failed to load vectorstore - Chroma returned None")
             except Exception as e:
                 error_msg = str(e)
-                # Скрываем детали API ключа
                 if "API key" in error_msg or "401" in error_msg or "invalid_api_key" in error_msg or "Incorrect API key" in error_msg:
-                    # Проверяем что это ошибка embeddings
                     if "embedding" in error_msg.lower() or "openai" in error_msg.lower():
                         print("Warning: Failed to load vectorstore - embeddings need OpenAI API key (DeepSeek key doesn't work for embeddings). Using CSV fallback.")
                     else:
                         print("Warning: Failed to load vectorstore due to API key issue. Using CSV fallback.")
                 else:
                     print(f"Warning: Failed to load existing vectorstore: {error_msg[:200]}")
-                # Не показываем полный traceback для API ошибок
                 if "API key" not in error_msg and "401" not in error_msg and "Incorrect API key" not in error_msg:
                     import traceback
                     traceback.print_exc()
@@ -211,14 +204,12 @@ class VectorStoreManager:
                     print("Note: Set OPENAI_API_KEY in .env for vectorstore, or use CSV fallback")
                 else:
                     print(f"Error creating vectorstore: {error_msg[:200]}")
-                # Не показываем полный traceback для API ошибок
                 if "API key" not in error_msg and "401" not in error_msg:
                     import traceback
                     traceback.print_exc()
                 raise
     
     def search(self, query: str, k: int = None) -> List[Dict[str, Any]]:
-        # Проверяем что embeddings доступны
         if self.embeddings is None:
             raise ValueError("Embeddings not available - needs OpenAI API key. DeepSeek key doesn't work for embeddings.")
         

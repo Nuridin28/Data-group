@@ -12,11 +12,6 @@ router = APIRouter(prefix="/ask", tags=["SQL Generation & AI Questions"])
 
 @router.post("", response_model=SQLResponse)
 async def ask_question(request: SQLRequest) -> SQLResponse:
-    """
-    Handle both SQL generation and general AI questions.
-    Accepts SQLRequest with 'question' field.
-    Returns SQLResponse with explanation that can contain either SQL explanation or general AI answer.
-    """
     try:
         question = request.question if hasattr(request, 'question') and request.question else ""
         
@@ -26,7 +21,6 @@ async def ask_question(request: SQLRequest) -> SQLResponse:
         data_service = get_data_service()
         rag_chain = get_rag_chain()
         
-        # Try to generate SQL first, but also support general questions
         try:
             table_schema = data_service.get_table_schema()
             result = rag_chain.generate_sql_query(question, table_schema)
@@ -37,11 +31,9 @@ async def ask_question(request: SQLRequest) -> SQLResponse:
                 table_name=result.get("table_name", "transactions")
             )
         except Exception as sql_error:
-            # Fallback to general question answering
             result = rag_chain.query(question, use_rag=True)
             answer = result.get("answer", "Не удалось получить ответ")
             
-            # Return as SQLResponse with explanation containing the answer
             return SQLResponse(
                 sql_query="",
                 explanation=answer,

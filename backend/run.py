@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-"""Simple script to run the FastAPI application."""
 import uvicorn
 
 if __name__ == "__main__":

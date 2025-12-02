@@ -10,18 +10,13 @@ from config.config import settings
 
 router = APIRouter(prefix="/chat", tags=["AI Chat"])
 
-# Direct DeepSeek API integration
 def call_deepseek_api(question: str, context: str = "") -> str:
-    """Call DeepSeek API directly"""
     try:
         import os
         import sys
         
-        # CRITICAL: Fix langchain attribute errors by monkey patching BEFORE any langchain imports
         try:
-            # Import langchain first and patch all missing attributes
             import langchain
-            # Set all attributes that langchain_core might try to access
             attrs_to_set = ['verbose', 'debug', 'llm_cache', 'tracing_v2', 'tracing_callback']
             for attr in attrs_to_set:
                 if not hasattr(langchain, attr):
@@ -29,25 +24,20 @@ def call_deepseek_api(question: str, context: str = "") -> str:
         except (ImportError, AttributeError) as patch_error:
             print(f"Warning: Could not patch langchain: {patch_error}")
         
-        # Set environment variables
         os.environ["LANGCHAIN_VERBOSE"] = "false"
         os.environ["LANGCHAIN_DEBUG"] = "false"
         
-        # Now import langchain components
         from langchain_openai import ChatOpenAI
         from langchain_core.messages import HumanMessage, SystemMessage
         
-        # Try to patch langchain_core globals as well
         try:
             from langchain_core import globals as langchain_globals
-            # Set internal flags
             for attr in ['_verbose', '_debug', '_llm_cache']:
                 if hasattr(langchain_globals, attr):
                     setattr(langchain_globals, attr, None if 'cache' in attr else False)
         except:
             pass
         
-        # Initialize LLM with DeepSeek settings - use minimal parameters to avoid langchain issues
         llm_kwargs = {
             "model": settings.LLM_MODEL or "deepseek-chat",
             "temperature": float(settings.TEMPERATURE) if settings.TEMPERATURE else 0.7,
@@ -65,9 +55,7 @@ def call_deepseek_api(question: str, context: str = "") -> str:
                 base_url = base_url + '/v1'
             llm_kwargs["base_url"] = base_url
         
-        # Initialize LLM - handle langchain version issues with monkey patching
         try:
-            # Try to patch langchain globals before initialization
             try:
                 from langchain_core import globals as langchain_globals
                 if hasattr(langchain_globals, '_verbose'):
@@ -79,22 +67,19 @@ def call_deepseek_api(question: str, context: str = "") -> str:
             
             llm = ChatOpenAI(**llm_kwargs)
         except (AttributeError, TypeError) as e:
-            error_str = str(e)
-            if "verbose" in error_str or "debug" in error_str or "has no attribute" in error_str:
-                # Try monkey patching langchain module directly
-                try:
-                    import langchain
-                    langchain.verbose = False
-                    langchain.debug = False
-                except:
-                    pass
-                
-                # Retry with same parameters
-                llm = ChatOpenAI(**llm_kwargs)
-            else:
-                raise
+                error_str = str(e)
+                if "verbose" in error_str or "debug" in error_str or "has no attribute" in error_str:
+                    try:
+                        import langchain
+                        langchain.verbose = False
+                        langchain.debug = False
+                    except:
+                        pass
+                    
+                    llm = ChatOpenAI(**llm_kwargs)
+                else:
+                    raise
         
-        # System prompt for professional financial analyst
         system_prompt = """Ты эксперт по финансовой аналитике и AI-ассистент, специализирующийся на аналитике цифровой экономики Казахстана.
 
 Твоя экспертиза включает:
@@ -127,14 +112,13 @@ def call_deepseek_api(question: str, context: str = "") -> str:
 - Контекст: даты, регионы, категории, сегменты
 
 ВАЖНО: Форматируй ответ используя Markdown для лучшей читаемости:
-- Используй ## для основных разделов, ### для подразделов
+- Используй
 - Используй **жирный** для акцента и ключевых метрик
 - Используй маркированные списки (-) для списков
 - Используй --- для горизонтальных разделителей
 - Используй таблицы при представлении данных
 - Делай параграфы краткими и хорошо структурированными"""
         
-        # Build the message
         if context:
             user_message = f"""Контекст из датасета:
 {context}
@@ -152,8 +136,6 @@ def call_deepseek_api(question: str, context: str = "") -> str:
             HumanMessage(content=user_message)
         ]
         
-        # Call LLM with error handling for langchain version issues
-        # Ensure all langchain attributes are set before invoke
         try:
             import langchain
             for attr in ['verbose', 'debug', 'llm_cache', 'tracing_v2', 'tracing_callback']:
@@ -167,16 +149,13 @@ def call_deepseek_api(question: str, context: str = "") -> str:
         except (AttributeError, TypeError) as e:
             error_str = str(e)
             if "has no attribute" in error_str:
-                # Extract attribute name and set it
                 try:
                     import langchain
                     import re
-                    # Try to find attribute name in error
                     match = re.search(r"has no attribute '(\w+)'", error_str)
                     if match:
                         attr_name = match.group(1)
                         setattr(langchain, attr_name, None if 'cache' in attr_name else False)
-                        # Retry
                         response = llm.invoke(messages)
                     else:
                         raise
@@ -208,17 +187,12 @@ def call_deepseek_api(question: str, context: str = "") -> str:
 
 @router.post("", response_model=QuestionResponse)
 async def chat_message(request: QuestionRequest) -> QuestionResponse:
-    """
-    AI Chat endpoint for asking questions about the financial data.
-    Uses DeepSeek API directly for professional financial analysis.
-    """
     try:
         question = request.question if hasattr(request, 'question') and request.question else ""
         
         if not question or not question.strip():
             raise HTTPException(status_code=400, detail="Question is required")
         
-        # Get comprehensive dataset context for general analysis
         context = ""
         sources = []
         
@@ -231,11 +205,9 @@ async def chat_message(request: QuestionRequest) -> QuestionResponse:
                 
                 context_parts = []
                 
-                # Overall dataset statistics
                 context_parts.append("=== DATASET OVERVIEW ===")
                 context_parts.append(f"Total transactions: {len(df)}")
                 
-                # Date range
                 if 'date' in df.columns and not df['date'].isna().all():
                     df['date'] = pd.to_datetime(df['date'], errors='coerce')
                     date_range = df['date'].dropna()
@@ -244,7 +216,6 @@ async def chat_message(request: QuestionRequest) -> QuestionResponse:
                         context_parts.append(f"Unique dates: {date_range.dt.date.nunique()}")
                         context_parts.append(f"Months covered: {date_range.dt.to_period('M').nunique()}")
                 
-                # Revenue statistics
                 if 'amount_kzt' in df.columns:
                     valid_amounts = df['amount_kzt'].dropna()
                     if len(valid_amounts) > 0:
@@ -254,7 +225,6 @@ async def chat_message(request: QuestionRequest) -> QuestionResponse:
                         context_parts.append(f"Median transaction: {valid_amounts.median():,.2f} KZT")
                         context_parts.append(f"Min: {valid_amounts.min():,.2f} KZT, Max: {valid_amounts.max():,.2f} KZT")
                 
-                # Channel distribution
                 if 'channel' in df.columns:
                     channel_stats = df.groupby('channel').agg({
                         'amount_kzt': ['sum', 'count', 'mean'],
@@ -268,7 +238,6 @@ async def chat_message(request: QuestionRequest) -> QuestionResponse:
                         pct = (total / valid_amounts.sum() * 100) if len(valid_amounts) > 0 and valid_amounts.sum() > 0 else 0
                         context_parts.append(f"{channel}: {total:,.2f} KZT ({pct:.1f}%), {count} transactions, avg {avg:,.2f} KZT")
                 
-                # Merchant category distribution
                 if 'merchant_category' in df.columns:
                     category_stats = df.groupby('merchant_category').agg({
                         'amount_kzt': ['sum', 'count', 'mean']
@@ -281,7 +250,6 @@ async def chat_message(request: QuestionRequest) -> QuestionResponse:
                         pct = (total / valid_amounts.sum() * 100) if len(valid_amounts) > 0 and valid_amounts.sum() > 0 else 0
                         context_parts.append(f"{category}: {total:,.2f} KZT ({pct:.1f}%), {count} transactions")
                 
-                # City/Region distribution
                 if 'city' in df.columns:
                     city_stats = df.groupby('city').agg({
                         'amount_kzt': ['sum', 'count']
@@ -302,7 +270,6 @@ async def chat_message(request: QuestionRequest) -> QuestionResponse:
                         count = region_stats.loc[region, ('amount_kzt', 'count')]
                         context_parts.append(f"{region}: {total:,.2f} KZT, {count} transactions")
                 
-                # Payment method distribution
                 if 'payment_method' in df.columns:
                     payment_stats = df.groupby('payment_method').agg({
                         'amount_kzt': ['sum', 'count']
@@ -314,7 +281,6 @@ async def chat_message(request: QuestionRequest) -> QuestionResponse:
                         pct = (total / valid_amounts.sum() * 100) if len(valid_amounts) > 0 and valid_amounts.sum() > 0 else 0
                         context_parts.append(f"{method}: {total:,.2f} KZT ({pct:.1f}%), {count} transactions")
                 
-                # Customer segment distribution
                 if 'customer_segment' in df.columns:
                     segment_stats = df.groupby('customer_segment').agg({
                         'amount_kzt': ['sum', 'count']
@@ -325,7 +291,6 @@ async def chat_message(request: QuestionRequest) -> QuestionResponse:
                         count = segment_stats.loc[segment, ('amount_kzt', 'count')]
                         context_parts.append(f"{segment}: {total:,.2f} KZT, {count} transactions")
                 
-                # Time-based trends (monthly)
                 if 'date' in df.columns and not df['date'].isna().all():
                     df['year_month'] = df['date'].dt.to_period('M').astype(str)
                     monthly_trends = df.groupby('year_month').agg({
@@ -337,7 +302,6 @@ async def chat_message(request: QuestionRequest) -> QuestionResponse:
                         count = monthly_trends.loc[month, ('amount_kzt', 'count')]
                         context_parts.append(f"{month}: {total:,.2f} KZT, {count} transactions")
                 
-                # Refund and cancellation rates
                 if 'is_refunded' in df.columns:
                     refunded_count = df['is_refunded'].sum()
                     refunded_pct = (refunded_count / len(df) * 100) if len(df) > 0 else 0
@@ -352,7 +316,6 @@ async def chat_message(request: QuestionRequest) -> QuestionResponse:
                 valid_transactions = len(df[(df.get('is_refunded', 0) == 0) & (df.get('is_canceled', 0) == 0)])
                 context_parts.append(f"Valid transactions: {valid_transactions} ({valid_transactions/len(df)*100:.2f}%)")
                 
-                # Suspicious transactions
                 if 'suspicious_flag' in df.columns:
                     suspicious_count = df['suspicious_flag'].sum()
                     suspicious_pct = (suspicious_count / len(df) * 100) if len(df) > 0 else 0
@@ -360,7 +323,6 @@ async def chat_message(request: QuestionRequest) -> QuestionResponse:
                 
                 context = "\n".join(context_parts)
                 
-                # Add summary as source
                 sources.append({
                     "content": f"Dataset summary: {len(df)} transactions from {date_range.min() if 'date' in df.columns else 'N/A'} to {date_range.max() if 'date' in df.columns else 'N/A'}",
                     "metadata": {
@@ -374,7 +336,6 @@ async def chat_message(request: QuestionRequest) -> QuestionResponse:
             print(f"Warning: Could not get comprehensive data context: {e}")
             import traceback
             traceback.print_exc()
-            # Fallback to sample data
             try:
                 data_service = get_data_service()
                 relevant_data = data_service.get_relevant_data_for_question(question, limit=50)
@@ -386,7 +347,6 @@ async def chat_message(request: QuestionRequest) -> QuestionResponse:
             except:
                 pass
         
-        # Call DeepSeek API
         answer = call_deepseek_api(question, context)
         
         return QuestionResponse(
@@ -405,10 +365,6 @@ async def chat_message(request: QuestionRequest) -> QuestionResponse:
 
 @router.post("/stream", response_model=Dict[str, Any])
 async def chat_message_stream(request: QuestionRequest):
-    """
-    Streaming chat endpoint (for future implementation)
-    """
-    # For now, return regular response
     response = await chat_message(request)
     return response.model_dump()
 

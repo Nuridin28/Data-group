@@ -30,7 +30,7 @@ interface AIChatBotProps {
 
 const CHAT_STORAGE_KEY = 'chat_history_session';
 
-// Helper functions for session storage
+
 const loadChatHistory = (fileId: string | null): ChatMessage[] => {
   if (!fileId) return getDefaultMessages();
   
@@ -63,12 +63,12 @@ const saveChatHistory = (fileId: string | null, messages: ChatMessage[]) => {
 };
 
 const getDefaultMessages = (): ChatMessage[] => [
-  {
-    id: '1',
-    role: 'assistant',
-    content: 'Привет! Я AI-ассистент для анализа транзакционных данных. Задайте мне вопросы о данных, прогнозах или рекомендациях.',
-    timestamp: new Date(),
-  },
+    {
+      id: '1',
+      role: 'assistant',
+      content: 'Привет! Я AI-ассистент для анализа транзакционных данных. Задайте мне вопросы о данных, прогнозах или рекомендациях.',
+      timestamp: new Date(),
+    },
 ];
 
 const AIChatBot = ({ fileId, data: _data, onMessagesChange }: AIChatBotProps) => {
@@ -83,7 +83,7 @@ const AIChatBot = ({ fileId, data: _data, onMessagesChange }: AIChatBotProps) =>
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  // Load chat history when fileId changes
+  
   useEffect(() => {
     if (fileId) {
       const loadedMessages = loadChatHistory(fileId);
@@ -93,7 +93,7 @@ const AIChatBot = ({ fileId, data: _data, onMessagesChange }: AIChatBotProps) =>
     }
   }, [fileId]);
 
-  // Save chat history whenever messages change
+  
   useEffect(() => {
     saveChatHistory(fileId, messages);
     if (onMessagesChange) {
@@ -170,7 +170,7 @@ const AIChatBot = ({ fileId, data: _data, onMessagesChange }: AIChatBotProps) =>
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 120px)' }}>
-      {/* Header with clear button */}
+      {}
       {messages.length > 1 && (
         <Box 
           sx={{ 
@@ -203,7 +203,7 @@ const AIChatBot = ({ fileId, data: _data, onMessagesChange }: AIChatBotProps) =>
         </Box>
       )}
 
-      {/* Messages */}
+      {}
       <Box
         sx={{
           flex: 1,
@@ -467,7 +467,7 @@ const AIChatBot = ({ fileId, data: _data, onMessagesChange }: AIChatBotProps) =>
         <div ref={messagesEndRef} />
       </Box>
 
-      {/* Suggested Questions */}
+      {}
       {messages.length === 1 && (
         <Box 
           sx={{ 
@@ -512,15 +512,15 @@ const AIChatBot = ({ fileId, data: _data, onMessagesChange }: AIChatBotProps) =>
                 onClick={() => setInput(question)}
               >
                 <Typography variant="body2" sx={{ fontSize: '0.875rem' }}>
-                  {question}
-                </Typography>
+                {question}
+              </Typography>
               </Paper>
             ))}
           </Box>
         </Box>
       )}
 
-      {/* Input */}
+      {}
       <Box 
         sx={{ 
           p: 2, 
