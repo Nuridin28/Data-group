@@ -3,8 +3,14 @@
 ## Настройки на Render
 
 ### Build Command
+Если requirements.txt в корне репозитория:
 ```bash
-pip install -r requirements.txt
+pip install --upgrade pip && pip install -r requirements.txt
+```
+
+Если requirements.txt в папке backend:
+```bash
+pip install --upgrade pip && pip install -r backend/requirements.txt
 ```
 
 ### Start Command
@@ -33,7 +39,7 @@ TEMPERATURE=0.0
 ```
 
 ### Python Version
-Используется Python 3.12.7 (указано в runtime.txt)
+Используется Python 3.13.4 (указано в runtime.txt в корне репозитория)
 
 ### Важно
 - Убедитесь, что файл `data/track_1_digital_economy_kz.csv` находится в репозитории или загружен на сервер
