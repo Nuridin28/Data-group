@@ -33,8 +33,28 @@ class Settings:
     def validate(cls) -> None:
         if not cls.API_KEY:
             raise ValueError("API_KEY is required. Please set it in .env file.")
-        if not os.path.exists(cls.DATA_FILE):
-            raise FileNotFoundError(f"Data file not found: {cls.DATA_FILE}")
+        
+        possible_paths = [
+            cls.DATA_FILE,
+            os.path.join("backend", cls.DATA_FILE),
+            os.path.join(os.path.dirname(os.path.dirname(__file__)), cls.DATA_FILE),
+            "data/track_1_digital_economy_kz.csv",
+            "backend/data/track_1_digital_economy_kz.csv",
+        ]
+        
+        found_path = None
+        for path in possible_paths:
+            if os.path.exists(path):
+                found_path = path
+                cls.DATA_FILE = path
+                break
+        
+        if not found_path:
+            error_msg = f"Data file not found. Tried paths: {', '.join(possible_paths)}\n"
+            error_msg += f"Current DATA_FILE env var: '{os.getenv('DATA_FILE', 'not set')}'\n"
+            error_msg += f"Current working directory: {os.getcwd()}\n"
+            error_msg += "Please set DATA_FILE environment variable to the correct path."
+            raise FileNotFoundError(error_msg)
     
     @property
     def effective_api_key(self) -> str:

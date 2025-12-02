@@ -18,7 +18,7 @@ services:
       - key: CHROMA_PERSIST_DIR
         value: ./vectorstore
       - key: DATA_FILE
-        value: backend/data/track_1_digital_economy_kz.csv
+        value: data/track_1_digital_economy_kz.csv
       - key: RAG_TOP_K
         value: 5
       - key: TEMPERATURE
