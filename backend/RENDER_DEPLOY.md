@@ -1,27 +1,29 @@
 # Деплой на Render
 
-## Настройки на Render
+## Автоматическая настройка через render.yaml
+
+В корне репозитория создан файл `render.yaml` с настройками деплоя. Render автоматически использует его при деплое.
+
+## Ручная настройка на Render
+
+Если вы не используете render.yaml, настройте вручную:
 
 ### Build Command
-Если requirements.txt в корне репозитория:
 ```bash
 pip install --upgrade pip && pip install -r requirements.txt
 ```
 
-Если requirements.txt в папке backend:
-```bash
-pip install --upgrade pip && pip install -r backend/requirements.txt
-```
+**ВАЖНО:** Убедитесь, что `requirements.txt` находится в корне репозитория, или измените путь в команде.
 
 ### Start Command
 ```bash
 cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT
 ```
 
-Или если корневая директория - backend:
-```bash
-uvicorn main:app --host 0.0.0.0 --port $PORT
-```
+**КРИТИЧЕСКИ ВАЖНО:** 
+- НЕ используйте `gunicorn` - это для Django/Flask
+- Используйте `uvicorn` для FastAPI
+- Убедитесь, что путь `cd backend` правильный относительно корня репозитория
 
 ### Environment Variables
 Установите следующие переменные окружения в настройках Render:
